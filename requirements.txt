@@ -1,0 +1,10 @@
+flask
+flask-restful
+gunicorn
+redis
+python-pushover
+prometheus_client
+apscheduler
+gevent
+pyyaml
+asteval
