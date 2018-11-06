@@ -1,10 +1,14 @@
 from abc import ABC, abstractmethod
 from time import time
 
+SENSOR = 1
+ACTUATOR = 2
+
 
 class Metric(ABC):
     '''object that associates metric value and related counters / flags / config'''
     addr = None
+    mode = None
     ttl = None
     accept_refresh = None
 
@@ -71,12 +75,14 @@ class Gauge(Metric):
 
     def __init__(self,
                  addr=None,
+                 mode=SENSOR,
                  ttl=None,
                  accept_refresh=True,
                  default_value=None,
                  hit_counter=0):
         #Metric.__init__(self)
         self.addr = addr
+        self.mode = mode
         self.ttl = ttl
         self.accept_refresh = accept_refresh
         self.value = default_value
@@ -96,11 +102,13 @@ class Counter(Metric):
 
     def __init__(self,
                  addr=None,
+                 mode=SENSOR,
                  ttl=None,
                  accept_refresh=False,
                  default_value=None,
                  hit_counter=0):
         self.addr = addr
+        self.mode = mode
         self.ttl = ttl
         self.accept_refresh = accept_refresh
         self.value = default_value
@@ -120,11 +128,13 @@ class Switch(Metric):
 
     def __init__(self,
                  addr=None,
+                 mode=SENSOR,
                  ttl=None,
                  accept_refresh=False,
                  default_value=False,
                  hit_counter=0):
         self.addr = addr
+        self.mode = mode
         self.ttl = ttl
         self.accept_refresh = accept_refresh
         self.value = default_value

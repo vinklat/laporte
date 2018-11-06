@@ -1,4 +1,4 @@
-from nodes.sensor import Gauge, Counter, Switch
+from nodes.sensor import Gauge, Counter, Switch, SENSOR, ACTUATOR
 from asteval import Interpreter
 import logging
 
@@ -171,13 +171,17 @@ class Node():
 
     def add_sensors(self,
                     sensors_form,
+                    actuators_form,
                     defaults_form={},
                     ttl_form={},
                     option_params_form={}):
         '''initialize all sensors for node'''
 
-        for metric_name in sensors_form:
-            metric_type = sensors_form[metric_name]
+        sensors={**sensors_form, **actuators_form}
+
+        for metric_name in sensors:
+            metric_type = sensors[metric_name]
+
             param = {}
 
             if metric_name in defaults_form:
@@ -187,6 +191,9 @@ class Node():
                 param['ttl'] = ttl_form
             elif metric_name in ttl_form:
                 param['ttl'] = ttl_form[metric_name]
+
+            if metric_name in actuators_form:
+                param['mode'] = ACTUATOR
 
             param.update(option_params_form)
 
@@ -207,9 +214,17 @@ class Node():
 
         try:
             sensors = config_dict['sensors']
-        except KeyError:
-            raise KeyError('no sensors configured')
+        except:
+            sensors={}
 
+        try:
+            actuators = config_dict['actuators']
+        except:
+            actuators={}
+
+        if not (sensors or actuators):
+            logger.warning('node with no sensors / actuators configured')
+        
         try:
             defaults = config_dict['default']
         except KeyError:
@@ -228,6 +243,7 @@ class Node():
 
         self.add_sensors(
             sensors,
+            actuators,
             defaults_form=defaults,
             ttl_form=ttl,
             option_params_form=option_params)
@@ -248,8 +264,14 @@ class Node():
         except KeyError:
             pass
 
+        self.eval_dict={}
         try:
-            self.eval_dict = config_dict['eval']
+            # add defined evals only
+            for metric_name in config_dict['eval']:
+                if (metric_name in sensors) or (metric_name in actuators):
+                    self.eval_dict[metric_name] = config_dict['eval'][metric_name]
+                else:
+                    logger.warning("{} in eval is not sensor or actuator".format(metric_name))
         except KeyError:
             pass
 
