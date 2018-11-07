@@ -1,0 +1,55 @@
+# example:
+# - two buttons (switches) with 20s delay
+# - the light works during the activity of at least one button
+#
+# you can control the switch by curl (rest api):
+#   curl http://localhost:9128/api/metric/button1 -d "switch_state=on" -X PUT    
+#
+# look at the result and refresh page (Firefox recommended for json response):
+#   http://localhost:9128/api/metrics/by_node
+
+virtual:
+    button1:
+        addr: "1"
+        sensors:
+            switch_state: switch
+
+        # default value after system start
+        default:
+            switch_state: off
+
+        # after ttl expires, returns the switch to its default state
+        ttl: 20
+
+        # if refresh is set to true:
+        #  - after pressing the switch again in the same state, ttl will be reset 
+        # if refresh is not set:
+        #  - during a delay the next push is ignored
+        refresh: true
+
+
+    button2:
+        addr: "2"
+        sensors:
+            switch_state: switch
+        default:
+            switch_state: off
+        ttl: 20
+        refresh: true
+
+    light:
+        addr: "3"
+        actuators:
+            relay_state: switch
+        default:
+            switch_state: off
+
+        #monitors the activity of other sensors
+        watch:
+            - button1
+            - button2
+
+        # the following metric will be calculated
+        eval:
+            relay_state: "button1['switch_state'] or button2['switch_state']"
+    
