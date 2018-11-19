@@ -1,5 +1,6 @@
 flask
 flask-restful
+flask-socketio
 prometheus_client
 apscheduler
 gevent

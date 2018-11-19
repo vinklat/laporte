@@ -12,6 +12,7 @@ class Nodes():
 
     node_dict = {}
     config_dict = {}
+    sio = None
 
     def load_config(self, filename):
         '''load config of input nodes from yaml file'''
@@ -191,6 +192,13 @@ class Nodes():
 
         return ret
 
+    def sio_emit_actuators(self, node_id, actuators_changed):
+        if self.sio is not None:
+            self.sio.emit(
+                'actuator_response', {node_id: actuators_changed},
+                room='mqtt',
+                namespace='/metric')
+
     def do_watching_eval(self, node_id):
         '''evaluate watching nodes of node_id'''
 
@@ -200,7 +208,9 @@ class Nodes():
                 logger.debug("evaluating node {} (watching {})".format(
                     x, node_id))
                 foreign_vars = self.get_sensors_str_for_watch_eval()
-                node.do_eval(foreign_vars)
+                actuators_changed = node.do_eval(foreign_vars)
+                if actuators_changed:
+                    self.sio_emit_actuators(x, actuators_changed)
 
     def set_values(self, node_id, values_form):
         '''set values for sensors (metrics) of node_id'''
@@ -218,7 +228,11 @@ class Nodes():
             if node.eval_dict:
                 foreign_vars = self.get_sensors_str_for_watch_eval()
                 logger.debug("evaluating node {} (after set)".format(node_id))
-                node.do_eval(foreign_vars)  #evaluate this node
+                #evaluate this node
+                actuators_changed = node.do_eval(foreign_vars)
+                if actuators_changed:
+                    self.sio_emit_actuators(node_id, actuators_changed)
+
             self.do_watching_eval(node_id)  #evaluate watching nodes
 
         #state of all sensors after action
@@ -255,7 +269,11 @@ class Nodes():
                     logger.debug(
                         "evaluating node {} (after ttl timeout)".format(
                             node_id))
-                    node.do_eval(foreign_vars)  #evaluate this node
+                    #evaluate this node
+                    actuators_changed = node.do_eval(foreign_vars)
+                    if actuators_changed:
+                        self.sio_emit_actuators(node_id, actuators_changed)
+
                 self.do_watching_eval(node_id)  #evaluate watching nodes
 
     def __init__(self, filename):

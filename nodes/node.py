@@ -281,7 +281,7 @@ class Node():
         if self.eval_dict is None:
             return
 
-        change = 0
+        actuators_changed = {}
         for eval_metric_name in self.eval_dict:
             expr = evalvars
             expr += self.get_sensors_str_for_eval()
@@ -306,13 +306,14 @@ class Node():
                 logger.debug("result: {} = {}".format(eval_metric_name, x))
 
                 if self.sensor_dict[eval_metric_name].set(x):
-                    change = 1
+                    if self.sensor_dict[eval_metric_name].mode == ACTUATOR:
+                        actuators_changed[eval_metric_name]=x
             else:
                 logger.warning("can't eval {}".format(eval_metric_name))
                 if len(aeval.error) > 0:
                     logger.debug(aeval.error[0].get_error())
 
-        return change
+        return actuators_changed
 
     def __init__(self):
         self.sensor_dict = {}
