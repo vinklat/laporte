@@ -215,16 +215,16 @@ class Node():
         try:
             sensors = config_dict['sensors']
         except:
-            sensors={}
+            sensors = {}
 
         try:
             actuators = config_dict['actuators']
         except:
-            actuators={}
+            actuators = {}
 
         if not (sensors or actuators):
             logger.warning('node with no sensors / actuators configured')
-        
+
         try:
             defaults = config_dict['default']
         except KeyError:
@@ -264,14 +264,17 @@ class Node():
         except KeyError:
             pass
 
-        self.eval_dict={}
+        self.eval_dict = {}
         try:
             # add defined evals only
             for metric_name in config_dict['eval']:
                 if (metric_name in sensors) or (metric_name in actuators):
-                    self.eval_dict[metric_name] = config_dict['eval'][metric_name]
+                    self.eval_dict[metric_name] = config_dict['eval'][
+                        metric_name]
                 else:
-                    logger.warning("{} in eval is not sensor or actuator".format(metric_name))
+                    logger.warning(
+                        "{} in eval is not sensor or actuator".format(
+                            metric_name))
         except KeyError:
             pass
 
@@ -281,7 +284,7 @@ class Node():
         if self.eval_dict is None:
             return
 
-        actuators_changed = {}
+        metrics_changed = {}
         for eval_metric_name in self.eval_dict:
             expr = evalvars
             expr += self.get_sensors_str_for_eval()
@@ -303,17 +306,16 @@ class Node():
                 break
 
             if not x is None:
-                logger.debug("result: {} = {}".format(eval_metric_name, x))
+                logger.debug("eval: {} = {}".format(eval_metric_name, x))
 
                 if self.sensor_dict[eval_metric_name].set(x):
-                    if self.sensor_dict[eval_metric_name].mode == ACTUATOR:
-                        actuators_changed[eval_metric_name]=x
+                    metrics_changed[eval_metric_name] = x
             else:
                 logger.warning("can't eval {}".format(eval_metric_name))
                 if len(aeval.error) > 0:
                     logger.debug(aeval.error[0].get_error())
 
-        return actuators_changed
+        return metrics_changed
 
     def __init__(self):
         self.sensor_dict = {}

@@ -2,7 +2,7 @@
 
 from gevent import monkey
 monkey.patch_all()
-from flask import Flask, request, Response, abort
+from flask import Flask, request, Response, abort, render_template, session
 from flask_restful import Resource, Api
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, close_room, rooms, disconnect
 from gevent.pywsgi import WSGIServer, LoggingLogAdapter
@@ -118,7 +118,8 @@ class MyNamespace(Namespace):
         logger.debug('SocketIO: {} '.format(message))
         for node_id in message:
             request_form = message[node_id]
-            logger.info('SocketIO: {}: {}'.format(node_id, str(request_form)))
+            logger.info('SocketIO in: {}: {}'.format(node_id,
+                                                     str(request_form)))
             nodes.set_values(node_id, request_form)
 
     def on_join(self, message):
@@ -221,6 +222,16 @@ class ConfigNodesGroup(Resource):
 api.add_resource(ConfigNodesByInput, '/api/config/nodes')
 api.add_resource(ConfigNodesInput, '/api/config/nodes/input/<string:input>')
 api.add_resource(ConfigNodesGroup, '/api/config/nodes/group/<string:group>')
+
+##
+## Web
+##
+
+
+@app.route('/')
+def index():
+    return render_template('index.html', async_mode=sio.async_mode)
+
 
 ##
 ## start scheduler

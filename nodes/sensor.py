@@ -63,6 +63,9 @@ class Metric(ABC):
                 self.reset()
                 return 1
 
+    def is_actuator(self):
+        return self.mode == ACTUATOR
+
 
 class Gauge(Metric):
     def get_type(self):

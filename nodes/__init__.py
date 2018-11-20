@@ -192,8 +192,38 @@ class Nodes():
 
         return ret
 
-    def sio_emit_actuators(self, node_id, actuators_changed):
-        if self.sio is not None:
+    def emit_events(self, diff):
+        ''' emit sensor data of chaged nodes to SocketIO event log namespace'''
+
+        if diff and self.sio is not None:
+            for node_id in diff:
+                logger.debug('emit log event: {}'.format({
+                    node_id:
+                    diff[node_id][1]
+                }))
+                self.sio.emit(
+                    'event',
+                    str({
+                        node_id: diff[node_id][1]
+                    }),
+                    broadcast=True,
+                    namespace='/log')
+
+    def emit_changes(self, node_id, sensors_changed):
+        ''' log evaluted data 
+        and emit chaged actuator data to SocketIO bidirectional connection'''
+
+        logger.info("eval: {}: {}".format(node_id, sensors_changed))
+        actuators_changed = {}
+
+        for metric_name in sensors_changed:
+            node = self.node_dict[node_id]
+            if node.sensor_dict[metric_name].is_actuator():
+                actuators_changed[metric_name] = sensors_changed[metric_name]
+
+        if actuators_changed and self.sio is not None:
+            logger.info("SocketIO out: {}: {}".format(node_id,
+                                                      actuators_changed))
             self.sio.emit(
                 'actuator_response', {node_id: actuators_changed},
                 room='mqtt',
@@ -210,7 +240,27 @@ class Nodes():
                 foreign_vars = self.get_sensors_str_for_watch_eval()
                 actuators_changed = node.do_eval(foreign_vars)
                 if actuators_changed:
-                    self.sio_emit_actuators(x, actuators_changed)
+                    self.emit_changes(x, actuators_changed)
+
+    def get_dict_diff(self, first, second):
+        '''get a diff of two dicts'''
+
+        diff = {}
+
+        KEYNOTFOUND = '<KEYNOTFOUND>'
+        # Check all keys in first dict
+        for key in first.keys():
+            if (not key in second):
+                diff[key] = (first[key], KEYNOTFOUND)
+            elif (first[key] != second[key]):
+                diff[key] = (first[key], second[key])
+
+        # Check all keys in second dict to find missing
+        for key in second.keys():
+            if (not key in first):
+                diff[key] = (KEYNOTFOUND, second[key])
+
+        return diff
 
     def set_values(self, node_id, values_form):
         '''set values for sensors (metrics) of node_id'''
@@ -231,28 +281,15 @@ class Nodes():
                 #evaluate this node
                 actuators_changed = node.do_eval(foreign_vars)
                 if actuators_changed:
-                    self.sio_emit_actuators(node_id, actuators_changed)
+                    self.emit_changes(node_id, actuators_changed)
 
             self.do_watching_eval(node_id)  #evaluate watching nodes
 
         #state of all sensors after action
         second = self.get_sensors_dict_by_node()
 
-        #get and return dicts diff
-        diff = {}
-
-        KEYNOTFOUND = '<KEYNOTFOUND>'
-        # Check all keys in first dict
-        for key in first.keys():
-            if (not key in second):
-                diff[key] = (first[key], KEYNOTFOUND)
-            elif (first[key] != second[key]):
-                diff[key] = (first[key], second[key])
-
-        # Check all keys in second dict to find missing
-        for key in second.keys():
-            if (not key in first):
-                diff[key] = (KEYNOTFOUND, second[key])
+        diff = self.get_dict_diff(first, second)
+        self.emit_events(diff)
 
         return diff
 
@@ -264,6 +301,9 @@ class Nodes():
             if node.update_sensors_ttl():
                 logger.debug("{} ttl timed out".format(node_id))
 
+                #state of all sensors before action
+                first = self.get_sensors_dict_by_node()
+
                 if node.eval_dict:
                     foreign_vars = self.get_sensors_str_for_watch_eval()
                     logger.debug(
@@ -272,9 +312,14 @@ class Nodes():
                     #evaluate this node
                     actuators_changed = node.do_eval(foreign_vars)
                     if actuators_changed:
-                        self.sio_emit_actuators(node_id, actuators_changed)
+                        self.emit_changes(node_id, actuators_changed)
 
                 self.do_watching_eval(node_id)  #evaluate watching nodes
+
+                #state of all sensors after action
+                second = self.get_sensors_dict_by_node()
+                diff = self.get_dict_diff(first, second)
+                self.emit_events(diff)
 
     def __init__(self, filename):
         self.node_dict = {}
