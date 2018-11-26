@@ -286,6 +286,9 @@ class Nodes():
 
             self.do_watching_eval(node_id)  #evaluate watching nodes
 
+        #unlock hitcounters
+        node.release_hitcounters(values_form)
+
         #state of all sensors after action
         second = self.get_sensors_dict_by_node()
 

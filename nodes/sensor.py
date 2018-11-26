@@ -18,6 +18,8 @@ class Metric(ABC):
     hit_interval = None
     ttl_remaining = None
 
+    lock_hit_fl = False
+
     @abstractmethod
     def get_type(self):
         pass
@@ -37,16 +39,27 @@ class Metric(ABC):
             self.hit_interval = timestamp - self.hit_timestamp
         self.hit_timestamp = timestamp
 
-    def set(self, value):
+    def set(self, value, hold_hitc=False):
+        if hold_hitc:
+            self.lock_hit_fl = False
+
         if value == self.value and not self.accept_refresh:
             return 0
 
-        if self.ttl is not None:
-            self.ttl_remaining = self.ttl
-
         self.value = value
-        self.count_hit()
+
+        if not self.lock_hit_fl:
+            if self.ttl is not None:
+                self.ttl_remaining = self.ttl
+            self.count_hit()
+
+        if hold_hitc:
+            self.lock_hit_fl = True
+
         return 1
+
+    def release_hitc(self):
+        self.lock_hit_fl = False
 
     def inc(self, value):
         if self.value is None:
@@ -75,6 +88,7 @@ class Gauge(Metric):
         self.value = self.default_value
         self.hit_counter = 0
         self.ttl_remaining = None
+        self.lock_hit_fl = False
 
     def __init__(self,
                  addr=None,
@@ -92,6 +106,7 @@ class Gauge(Metric):
         self.default_value = default_value
         self.hit_counter = hit_counter
         self.ttl_remaining = None
+        self.lock_hit_fl = False
 
 
 class Counter(Metric):
@@ -102,6 +117,7 @@ class Counter(Metric):
         self.value = self.default_value
         self.hit_counter = 0
         self.ttl_remaining = None
+        self.lock_hit_fl = False
 
     def __init__(self,
                  addr=None,
@@ -118,6 +134,7 @@ class Counter(Metric):
         self.default_value = default_value
         self.hit_counter = hit_counter
         self.ttl_remaining = None
+        self.lock_hit_fl = False
 
 
 class Switch(Metric):
@@ -126,6 +143,7 @@ class Switch(Metric):
 
     def reset(self):
         self.value = self.default_value
+        self.lock_hit_fl = False
         self.count_hit()
         self.ttl_remaining = None
 
@@ -144,3 +162,4 @@ class Switch(Metric):
         self.default_value = default_value
         self.hit_counter = hit_counter
         self.ttl_remaining = None
+        self.lock_hit_fl = False

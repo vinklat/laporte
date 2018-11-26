@@ -117,7 +117,7 @@ class Node():
         '''set value for sensor (metric) of node / used by set_values'''
 
         try:
-            ret = self.sensor_dict[metric_name].set(value)
+            ret = self.sensor_dict[metric_name].set(value, hold_hitc=True)
         except KeyError:
             raise KeyError('{}: sensor not configured'.format(metric_name))
 
@@ -164,6 +164,10 @@ class Node():
                 if self.set_value(metric_name, value):
                     change = 1
         return change
+
+    def release_hitcounters(self, values_form):
+        for metric_name in values_form:
+            self.sensor_dict[metric_name].release_hitc()
 
     def add_sensor(self, metric_name, sensor):
         '''add initialized sensor to node'''
