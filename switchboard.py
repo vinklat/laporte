@@ -120,7 +120,10 @@ class MyNamespace(Namespace):
             request_form = message[node_id]
             logger.info('SocketIO in: {}: {}'.format(node_id,
                                                      str(request_form)))
-            nodes.set_values(node_id, request_form)
+            try:
+                nodes.set_values(node_id, request_form)
+            except KeyError:
+                pass
 
     def on_join(self, message):
         join_room(message['room'])
@@ -144,9 +147,8 @@ nodes.sio = sio
 
 class Metric(Resource):
     def put(self, node_id):
+        logger.info("API: {}: {}".format(node_id, str(request.form.to_dict())))
         try:
-            logger.info("API: {}: {}".format(node_id,
-                                             str(request.form.to_dict())))
             ret = nodes.set_values(node_id, request.form)
         except KeyError:
             logger.warning("node {} not found".format(node_id))

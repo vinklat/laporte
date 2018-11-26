@@ -271,8 +271,9 @@ class Nodes():
         node = self.node_dict[node_id]
         try:
             change = node.set_values(values_form)
-        except KeyError:
-            raise KeyError("{}: node not configured".format(node_id))
+        except KeyError as err:
+            logger.warning("{}: {}".format(node_id, err))
+            change = {}
 
         if change:
             if node.eval_dict:
