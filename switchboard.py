@@ -11,8 +11,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+import yaml
 import logging
-from nodes import Nodes
+from sensors import Sensors
 
 ##
 ## cmd line argument parser
@@ -42,7 +43,7 @@ parser.add_argument(
     dest='sensors_fname',
     help='sensor config yaml file',
     type=str,
-    default='conf/nodes.yml')
+    default='conf/sensors.yml')
 
 LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 
@@ -89,8 +90,15 @@ logger.addHandler(ch)
 
 app = Flask(__name__)
 api = Api(app)
-nodes = Nodes(pars.sensors_fname)
-REGISTRY.register(nodes.CustomCollector(nodes))
+sensors = Sensors()
+with open(pars.sensors_fname, 'r') as stream:
+    try:
+        config_dict = yaml.load(stream)
+        sensors.add_sensors(config_dict)
+    except yaml.YAMLError as exc:
+        logger.error(exc)
+
+REGISTRY.register(sensors.CustomCollector(sensors))
 
 ##
 ## Prometheus API
@@ -121,13 +129,12 @@ class MyNamespace(Namespace):
             logger.info('SocketIO in: {}: {}'.format(node_id,
                                                      str(request_form)))
             try:
-                nodes.set_values(node_id, request_form)
+                sensors.set_values(node_id, request_form)
             except KeyError:
                 pass
 
     def on_join(self, message):
         join_room(message['room'])
-        session['receive_count'] = session.get('receive_count', 0) + 1
         emit('status_response', {'joined in': rooms()})
 
     def on_connect(self):
@@ -137,19 +144,19 @@ class MyNamespace(Namespace):
         emit('pong')
 
 
-sio.on_namespace(MyNamespace('/metric'))
-nodes.sio = sio
+sio.on_namespace(MyNamespace('/sensors'))
+sensors.sio = sio
 
 ##
 ## REST API methods
 ##
 
 
-class Metric(Resource):
+class Sensor(Resource):
     def put(self, node_id):
         logger.info("API: {}: {}".format(node_id, str(request.form.to_dict())))
         try:
-            ret = nodes.set_values(node_id, request.form)
+            ret = sensors.set_values(node_id, request.form)
         except KeyError:
             logger.warning("node {} not found".format(node_id))
             abort(404)  #not configured
@@ -157,73 +164,37 @@ class Metric(Resource):
         return ret
 
 
-class Metrics(Resource):
+class SensorsSource(Resource):
+    def get(self, source):
+        return dict(sensors.get_sensors_addr_config(source))
+
+
+class SensorsDump(Resource):
     def get(self):
-        return list(nodes.get_sensors())
+        return sensors.get_sensors_dump_list()
 
 
-class MetricsByNode(Resource):
+class SensorsData(Resource):
     def get(self):
-        return nodes.get_sensors_dict_by_node()
+        return list(sensors.get_sensors_data(skip_None=False))
 
 
-class MetricsBySensor(Resource):
+class SensorsDataByNode(Resource):
     def get(self):
-        return nodes.get_sensors_dict_by_sensor()
+        return sensors.get_sensors_dict_by_node()
 
 
-class MetricsByGroups(Resource):
+class SensorsDataBySensor(Resource):
     def get(self):
-        return nodes.get_sensors_dict_by_group()
+        return sensors.get_sensors_dict_by_sensor()
 
 
-class MetricsByNodeGroup(Resource):
-    def get(self, group_name):
-        return nodes.get_sensors_dict_of_group_by_node(group_name)
-
-
-class MetricsBySensorGroup(Resource):
-    def get(self, group_name):
-        return nodes.get_sensors_dict_of_group_by_sensor(group_name)
-
-
-api.add_resource(Metric, '/api/metric/<string:node_id>')
-api.add_resource(Metrics, '/api/metrics')
-api.add_resource(MetricsByNode, '/api/metrics/by_node')
-api.add_resource(MetricsBySensor, '/api/metrics/by_sensor')
-api.add_resource(MetricsByGroups, '/api/metrics/by_groups')
-api.add_resource(MetricsByNodeGroup,
-                 '/api/metrics/by_node/group/<string:group_name>')
-api.add_resource(MetricsBySensorGroup,
-                 '/api/metrics/by_sensor/group/<string:group_name>')
-
-
-class ConfigNodesByInput(Resource):
-    def get(self):
-        return nodes.get_config_dict_by_inputs()
-
-
-class ConfigNodesInput(Resource):
-    def get(self, input):
-        ret = nodes.get_config_dict_input(input)
-        if not ret:
-            logger.warning("input {} not configured".format(input))
-            abort(404)
-        return ret
-
-
-class ConfigNodesGroup(Resource):
-    def get(self, group):
-        ret = nodes.get_nodes_list_of_group(group)
-        if not ret:
-            logger.warning("{}: group not configured".format(group))
-            abort(404)
-        return ret
-
-
-api.add_resource(ConfigNodesByInput, '/api/config/nodes')
-api.add_resource(ConfigNodesInput, '/api/config/nodes/input/<string:input>')
-api.add_resource(ConfigNodesGroup, '/api/config/nodes/group/<string:group>')
+api.add_resource(Sensor, '/api/sensor/<string:node_id>')
+api.add_resource(SensorsSource, '/api/sensors/source/<string:source>')
+api.add_resource(SensorsDump, '/api/sensors/dump')
+api.add_resource(SensorsData, '/api/sensors')
+api.add_resource(SensorsDataByNode, '/api/sensors/by_node')
+api.add_resource(SensorsDataBySensor, '/api/sensors/by_sensor')
 
 ##
 ## Web
@@ -242,7 +213,7 @@ def index():
 scheduler = BackgroundScheduler()
 scheduler.start()
 scheduler.add_job(
-    func=nodes.update_sensors_ttl,
+    func=sensors.update_sensors_ttl,
     trigger=IntervalTrigger(seconds=1),
     id='ttl_job',
     name='update ttl counters every second',

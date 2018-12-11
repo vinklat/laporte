@@ -9,7 +9,7 @@ RUN apk --update add --virtual build-dependencies build-base \
 
 WORKDIR /switchboard
 COPY switchboard.py /switchboard/
-COPY nodes/*py /switchboard/nodes/
+COPY sensors/*py /switchboard/sensors/
 COPY conf/*yml /switchboard/conf/
 
 ENTRYPOINT [ "python", "./switchboard.py" ]
