@@ -3,43 +3,34 @@
 # - turns on the light when at least one switch is turned on
 #
 # you can control the switch by curl (rest api):
-#   curl http://localhost:9128/api/metric/switch1 -d "switch_state=on" -X PUT    
-#   curl http://localhost:9128/api/metric/switch1 -d "switch_state=off" -X PUT    
+#   curl http://localhost:9128/api/sensor/switch1 -d "switch_state=on" -X PUT    
+#   curl http://localhost:9128/api/sensor/switch1 -d "switch_state=off" -X PUT    
 #
 # look at the result (Firefox recommended for json response):
-#   http://localhost:9128/api/metrics/by_node
+#   http://localhost:9128/api/sensors/by_node
+#
+# or watch live Socket.IO log:
+#   http://localhost:9128
 
 
 virtual:
     switch1:
-        addr: "1"
         sensors:
-            switch_state: switch
-
-        # default value after system start
-        default:
-            switch_state: off
-
+            switch_state:
+                type: switch
     switch2:
-        addr: "2"
         sensors:
-            switch_state: switch
-        default:
-            switch_state: off
-
+            switch_state:
+                type: switch
     light:
-        addr: "3"
         actuators:
-            relay_state: switch
-        default:
-            switch_state: off
+            relay_state:
+                type: switch
 
-        # this sensor monitors the activity of other sensors
-        watch:
-            - switch1
-            - switch2
+                # this sensor monitors state of other sensors
+                eval_require:
+                    sw1: { switch1: { switch_state : value }}
+                    sw2: { switch2: { switch_state : value }}
 
-        # the following metric will be calculated
-        eval:
-            relay_state: "switch1['switch_state'] or switch2['switch_state']"
-    
+                # metric will be calculated
+                eval_expr: "sw1 or sw2"

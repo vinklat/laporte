@@ -2,38 +2,60 @@
 # - some sensor sends temperature, relative humidity and pressure
 # - the dew point and absolute humidity will be calculated
 #
-# you can try send fake metrics by curl (rest api):
-#   curl http://localhost:9128/api/metric/weather1 -d "temp_celsius=37.5" -d "hum_ratio=0.8" -d "relpress_hectopascals=1001" -X PUT
+# you can send metrics by curl (via rest api):
+#
+#   curl http://localhost:9128/api/metric/weather1 -d "temp_celsius=37.5" -d "hum_ratio=0.8" -X PUT
 #
 # look at the result (Firefox recommended for json response):
-#   http://localhost:9128/api/metrics/by_node
-
+#   http://localhost:9128/api/sensors/by_node
+#
+# or watch live Socket.IO log:
+#   http://localhost:9128
 
 virtual:
     weather1:
-        addr: "0"
         sensors:
-            temp_celsius: gauge
-            hum_ratio: gauge
-            relpress_hectopascals: gauge
-            dew_celsius: gauge
-            hum_grams: gauge
+            temp_celsius:
+                type: gauge
 
-        # the following metrics will be calculated
-        eval:
-            dew_celsius: >
-                l = log(hum_ratio);
-                m = 17.27 * temp_celsius;
-                n = temp_celsius + 237.3;
-                b = (l + (m / n)) / 17.27;
-                (237.3 * b) / (1 - b)
-            hum_grams: >
-                t =  8.1332 - (1762.39 / (dew_celsius + 235.66));
-                ((10**t) / 760.0) * 1000 * 18.0 / 22.4
+                # if ttl is set:
+                #   - all metrics will expire if they are not updated within ttl
+                #   - there will be a gap in the charts when it comes down
+                # if ttl is not set:
+                #   - the last value will cover an indeterminate state if the sensor goes out
+                ttl: 600
 
-        # if ttl is set:
-        #   - all metrics will expire if they are not updated within ttl
-        #   - there will be a gap in the charts when it comes down
-        # if ttl is not set:
-        #   - the last value will cover an indeterminate state if the sensor goes out
-        ttl: 300
+                # metric will be corrected (slope +1% and shift + 0.5)
+                eval_expr: 'value * 1.01 + 0.5'
+
+            hum_ratio:
+                type: gauge
+                ttl: 600
+                # percents will be stored as 0.0-1.0 (ratio)
+                eval_expr: 'value / 100'
+
+            dew_celsius:
+                type: gauge
+                ttl: 600
+
+                # metric will be calculated
+                eval_require:
+                    temp_celsius: { weather1: { temp_celsius: value }}
+                    hum_ratio: { weather1: { hum_ratio: value }}
+                eval_expr: >
+                    l = log(hum_ratio);
+                    m = 17.27 * temp_celsius;
+                    n = temp_celsius + 237.3;
+                    b = (l + (m / n)) / 17.27;
+                    (237.3 * b) / (1 - b)
+
+            hum_grams:
+                type: gauge
+                ttl: 600
+
+                # metric will be calculated
+                eval_require:
+                    dew_celsius: { weather1: { dew_celsius : value }}
+                eval_expr: >
+                    t =  8.1332 - (1762.39 / (dew_celsius + 235.66));
+                    ((10**t) / 760.0) * 1000 * 18.0 / 22.4
