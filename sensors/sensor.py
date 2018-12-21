@@ -75,6 +75,20 @@ class Sensor(ABC):
                 if not (data[x] is None and skip_None):
                     yield x, data[x]
 
+    def get_promexport_data(self):
+        if self.value is not None:
+            yield self.sensor_id, self.get_type(), self.value, ['node'], [
+                self.node_id
+            ]
+        if self.hits_total is not None:
+            yield 'hits_total', COUNTER, self.hits_total, ['node', 'sensor'], [
+                self.node_id, self.sensor_id
+            ]
+        if self.interval_seconds is not None:
+            yield 'interval_seconds', COUNTER, self.interval_seconds, [
+                'node', 'sensor'
+            ], [self.node_id, self.sensor_id]
+
     @abstractmethod
     def reset(self):
         pass
@@ -100,7 +114,7 @@ class Sensor(ABC):
             return 0
 
         if update:
-            self.prev_value=self.value
+            self.prev_value = self.value
 
         self.value = value
 
@@ -141,27 +155,30 @@ class Sensor(ABC):
             expr += "{}={};\n".format(var_node_id, vars_dict[var_node_id])
         for k, v in self.get_data(
                 selected={
-                    'value', 'prev_value', 'hits_total', 'hit_timestamp', 'interval_seconds',
-                    'ttl_remaining'
+                    'value', 'prev_value', 'hits_total', 'hit_timestamp',
+                    'interval_seconds', 'ttl_remaining'
                 }):
             expr += "{}={};\n".format(k, v)
 
         expr += self.eval_expr
 
-        logger.debug("complete eval expr {}:\n{}".format({ self.node_id: self.sensor_id}, expr))
+        logger.debug("complete eval expr {}:\n{}".format(
+            {
+                self.node_id: self.sensor_id
+            }, expr))
 
         try:
             x = aeval.eval(expr)
         except:
-            logger.error("aeval {}".format({ self.node_id: self.sensor_id}))
+            logger.error("aeval {}".format({self.node_id: self.sensor_id}))
             return 0
 
         if not x is None:
-            logger.info("eval: {}".format( { self.node_id: { self.sensor_id: x}}))
+            logger.info("eval: {}".format({self.node_id: {self.sensor_id: x}}))
             return self.set(x, update=update)
         else:
             logger.debug("can't eval {}.{}".format(self.node_id,
-                                                     self.sensor_id))
+                                                   self.sensor_id))
             if len(aeval.error) > 0:
                 logger.debug(aeval.error[0].get_error())
 
@@ -326,6 +343,6 @@ class Switch(Sensor):
                    node_id, source)
         self.hold = None
         self.value = self.default_value
+        self.prev_value = self.default_value
         self.hits_total = 0
         self.ttl_remaining = None
-        self.prev_value = self.default_value

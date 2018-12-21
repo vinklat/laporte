@@ -234,8 +234,9 @@ class Sensors():
 
         if diff and self.sio is not None:
             for node_id in diff:
-                logger.debug('emit log event: {}'.format({
-                    node_id: diff[node_id]
+                logger.info('complete sensor changes: {}'.format({
+                    node_id:
+                    diff[node_id]
                 }))
                 self.sio.emit(
                     'event',
@@ -305,53 +306,28 @@ class Sensors():
             self.sensors = inner_sensors
 
         def collect(self):
-            exporter_name = "switchboard"
+            EXPORTER_NAME = "switchboard"
 
             d = {}
             for sensor in self.sensors.sensor_index:
                 if sensor.hidden:
                     continue
 
-                if sensor.value is not None:
-                    name = '{}_{}'.format(exporter_name, sensor.sensor_id)
-                    labels = ['node']
-
+                for name, metric_type, value, labels, labels_data in sensor.get_promexport_data(
+                ):
                     if not name in d:
-                        if sensor.get_type() == COUNTER:
-                            x = CounterMetricFamily(name, '', labels=labels)
+                        metric_name = "{}_{}".format(EXPORTER_NAME, name)
+                        if metric_type == COUNTER:
+                            x = CounterMetricFamily(
+                                metric_name, '', labels=labels)
                         else:
-                            x = GaugeMetricFamily(name, '', labels=labels)
+                            x = GaugeMetricFamily(
+                                metric_name, '', labels=labels)
                         d[name] = x
                     else:
                         x = d[name]
 
-                    x.add_metric([sensor.node_id], sensor.value)
-
-                if not sensor.hits_total is None:
-                    name = '{}_hits_total'.format(exporter_name)
-                    labels = ['node', 'sensor']
-
-                    if not name in d:
-                        y = CounterMetricFamily(name, '', labels=labels)
-                        d[name] = y
-                    else:
-                        y = d[name]
-
-                    y.add_metric([sensor.node_id, sensor.sensor_id],
-                                 sensor.hits_total)
-
-                if not sensor.interval_seconds is None:
-                    name = '{}_interval_seconds'.format(exporter_name)
-                    labels = ['node', 'sensor']
-
-                    if not name in d:
-                        z = GaugeMetricFamily(name, '', labels=labels)
-                        d[name] = z
-                    else:
-                        z = d[name]
-
-                    z.add_metric([sensor.node_id, sensor.sensor_id],
-                                 sensor.interval_seconds)
+                    x.add_metric(labels_data, value)
 
             for q in d:
                 yield d[q]
