@@ -12,6 +12,7 @@ ACTUATOR = 2
 GAUGE = 1
 COUNTER = 2
 SWITCH = 3
+MESSAGE = 4
 
 
 class Sensor(ABC):
@@ -76,10 +77,9 @@ class Sensor(ABC):
                     yield x, data[x]
 
     def get_promexport_data(self):
-        if self.value is not None:
-            yield self.sensor_id, self.get_type(), self.value, ['node'], [
-                self.node_id
-            ]
+        t = self.get_type()
+        if (self.value is not None) and (t is not MESSAGE):
+            yield self.sensor_id, t, self.value, ['node'], [self.node_id]
         if self.hits_total is not None:
             yield 'hits_total', COUNTER, self.hits_total, ['node', 'sensor'], [
                 self.node_id, self.sensor_id
@@ -158,7 +158,10 @@ class Sensor(ABC):
                     'value', 'prev_value', 'hits_total', 'hit_timestamp',
                     'interval_seconds', 'ttl_remaining'
                 }):
-            expr += "{}={};\n".format(k, v)
+            if self.get_type() == MESSAGE:
+                expr += "{}='{}';\n".format(k, v)
+            else:
+                expr += "{}={};\n".format(k, v)
 
         expr += self.eval_expr
 
@@ -203,9 +206,6 @@ class Gauge(Sensor):
 
     def reset(self):
         self.value = self.default_value
-        #self.hits_total = None
-        #self.hit_timestamp = None
-        #self.interval_seconds = None
         self.ttl_remaining = None
         self.data_ready = False
 
@@ -246,9 +246,6 @@ class Counter(Sensor):
 
     def reset(self):
         self.value = self.default_value
-        #self.hits_total = None
-        #self.hit_timestamp = None
-        #self.interval_seconds = None
         self.ttl_remaining = None
         self.data_ready = False
 
@@ -257,21 +254,20 @@ class Counter(Sensor):
             value = float(value)
         return value
 
-    def __init__(
-            self,
-            sensor_id=None,
-            addr=None,
-            mode=SENSOR,
-            default_value=None,
-            accept_refresh=False,  #different than Gauge
-            ttl=None,
-            hidden=False,
-            eval_preserve=False,
-            eval_expr=None,
-            dataset=False,
-            eval_require=None,
-            node_id=None,
-            source=None):
+    def __init__(self,
+                 sensor_id=None,
+                 addr=None,
+                 mode=SENSOR,
+                 default_value=None,
+                 accept_refresh=False,
+                 ttl=None,
+                 hidden=False,
+                 eval_preserve=False,
+                 eval_expr=None,
+                 dataset=False,
+                 eval_require=None,
+                 node_id=None,
+                 source=None):
 
         self.setup(sensor_id, addr, mode, default_value, accept_refresh, ttl,
                    hidden, eval_preserve, eval_expr, dataset, eval_require,
@@ -322,21 +318,57 @@ class Switch(Sensor):
 
         return value
 
-    def __init__(
-            self,
-            sensor_id=None,
-            addr=None,
-            mode=SENSOR,
-            default_value=False,
-            accept_refresh=False,  #different than Gauge
-            ttl=None,
-            hidden=False,
-            eval_preserve=False,
-            eval_expr=None,
-            dataset=False,
-            eval_require=None,
-            node_id=None,
-            source=None):
+    def __init__(self,
+                 sensor_id=None,
+                 addr=None,
+                 mode=SENSOR,
+                 default_value=False,
+                 accept_refresh=False,
+                 ttl=None,
+                 hidden=False,
+                 eval_preserve=False,
+                 eval_expr=None,
+                 dataset=False,
+                 eval_require=None,
+                 node_id=None,
+                 source=None):
+
+        self.setup(sensor_id, addr, mode, default_value, accept_refresh, ttl,
+                   hidden, eval_preserve, eval_expr, dataset, eval_require,
+                   node_id, source)
+        self.hold = None
+        self.value = self.default_value
+        self.prev_value = self.default_value
+        self.hits_total = 0
+        self.ttl_remaining = None
+
+
+class Message(Sensor):
+    def get_type(self):
+        return MESSAGE
+
+    def reset(self):
+        self.value = self.default_value
+        self.ttl_remaining = None
+        self.data_ready = False
+
+    def fix_value(self, value):
+        return value
+
+    def __init__(self,
+                 sensor_id=None,
+                 addr=None,
+                 mode=SENSOR,
+                 default_value='',
+                 accept_refresh=False,
+                 ttl=None,
+                 hidden=False,
+                 eval_preserve=False,
+                 eval_expr=None,
+                 dataset=False,
+                 eval_require=None,
+                 node_id=None,
+                 source=None):
 
         self.setup(sensor_id, addr, mode, default_value, accept_refresh, ttl,
                    hidden, eval_preserve, eval_expr, dataset, eval_require,

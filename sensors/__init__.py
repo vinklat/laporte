@@ -1,4 +1,5 @@
-from sensors.sensor import Gauge, Counter, Switch, SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH
+from sensors.sensor import Gauge, Counter, Switch, Message
+from sensors.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 import logging
 
@@ -51,7 +52,8 @@ class Sensors():
         m = {
             'gauge': Gauge(**param),
             'counter': Counter(**param),
-            'switch': Switch(**param)
+            'switch': Switch(**param),
+            'message': Message(**param)
         }
 
         sensor = m[type]
