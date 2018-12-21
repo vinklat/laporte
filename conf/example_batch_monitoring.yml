@@ -1,0 +1,87 @@
+# example:
+# - monitoring state of a batch jobs (backups, ....)
+#
+# - arrange anywhere in your job code notifying of any changes:
+#
+#   curl http://localhost:9128/api/sensor/somejob -d "run_state=on" -X PUT    
+#   curl http://localhost:9128/api/sensor/somejob -d "run_state=off" -X PUT    
+#   curl http://localhost:9128/api/sensor/somejob -d "success_state=on" -X PUT    
+#   curl http://localhost:9128/api/sensor/somejob -d "success_state=off" -X PUT    
+#
+# - you will always have the actual state of a job
+#   job_state may have one of the 4 states:
+#
+#  0: job is not running, success is expired (hard alert)
+#  1: job is running, success is expired (soft alert)
+#  2: job is not running, success is active (OK state)
+#  3: job is running, success is active (running OK state)
+#
+# look at the result (Firefox recommended for json response):
+#   http://localhost:9128/api/sensors/by_node
+#
+# or watch live Socket.IO log:
+#   http://localhost:9128
+
+
+virtual:
+    somejob:
+        sensors:
+            run_state:
+                type: switch
+                # max duration of a job (example: backup time window)
+                ttl: 10
+                accept_refresh: true
+
+            success_state:
+                type: switch
+                # max duration of success state (example: backup age)
+                ttl: 20
+                accept_refresh: true
+
+
+            # variant 1: using logic operators
+            job_state:
+                type: gauge
+                hidden: true
+                eval_require:
+                    c: { somejob: { success_state: value }}
+                    d: { somejob: { run_state: value }}
+                default_value: 0
+                eval_expr: |
+                    a = True if value == 2 or value == 3 else False
+                    b = True if value == 1 or value == 3 else False
+                    c2 = ((not b) and c and (not d)) or (b and c and d) or (a and (not b) and d) or (a and b and (not d))
+                    d2 = ((not a) and (not c) and d) or ((not a) and b and c) or (a and c and d) or (a and b and (not c))
+                    c2 * 2 + d2
+
+            # variant 2: algorithm using ifs (some result as variant 1)
+            job_state2:
+                type: gauge
+                hidden: true
+                eval_require:
+                    s: { somejob: { success_state: value }}
+                    r: { somejob: { run_state: value }}
+                default_value: 0
+                eval_expr: |
+                    S = value
+                    if S==0:
+                        if r and not s:
+                            S=1
+                        if s and not r:
+                            S=2
+                    elif S==1:
+                        if (not s) and (not r):
+                            S=0
+                        if s and r:
+                            S=3
+                    elif S==2:
+                        if (not r) and (not s):
+                            S=0
+                        if r and s:
+                            S=3
+                    elif S==3:
+                        if (not r) and (not s):
+                            S=1
+                        if s and not r:
+                            S=2
+                    S
