@@ -1,6 +1,7 @@
 from sensors.sensor import Gauge, Counter, Switch, Message
 from sensors.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
+import json
 import logging
 
 # create logger
@@ -77,24 +78,26 @@ class Sensors():
 
         nsensors = 0
         if 'sensors' in node_config_dict:
-            for sensor_id in node_config_dict['sensors']:
+            for sensor_id, sensor_config_dict in node_config_dict[
+                    'sensors'].items():
                 self.__add_sensor(
                     source,
                     node_id,
                     node_addr,
                     sensor_id,
-                    node_config_dict['sensors'][sensor_id],
+                    sensor_config_dict,
                     mode=SENSOR)
                 nsensors + -1
 
         if 'actuators' in node_config_dict:
-            for sensor_id in node_config_dict['actuators']:
+            for sensor_id, sensor_config_dict in node_config_dict[
+                    'actuators'].items():
                 self.__add_sensor(
                     source,
                     node_id,
                     node_addr,
                     sensor_id,
-                    node_config_dict['actuators'][sensor_id],
+                    sensor_config_dict,
                     mode=ACTUATOR)
                 nsensors + -1
 
@@ -105,14 +108,19 @@ class Sensors():
         if not source in self.source_index:
             self.source_index[source] = {}
 
-        for node_id in source_config_dict:
-            self.__add_node(node_id, source, source_config_dict[node_id])
+        for node_id, node_config_dict in source_config_dict.items():
+            self.__add_node(node_id, source, node_config_dict)
 
     def add_sensors(self, config_dict):
-        for source in config_dict:
-            self.__add_source(source, config_dict[source])
+        for source, source_config_dict in config_dict.items():
+            self.__add_source(source, source_config_dict)
 
         self.prev_data = self.get_sensors_dict_by_node(skip_None=False)
+
+    def get_sensor_metric(self, node_id, sensor_id, metric):
+        v = next(self.node_id_index[node_id][sensor_id].get_data(
+            selected={metric}))[1]
+        return v
 
     def get_sensors_dump(self):
         for sensor in self.sensor_index:
@@ -123,8 +131,7 @@ class Sensors():
 
     def get_sensors_addr_config(self, source):
         config_keys = {'sensor_id', 'node_id', 'mode'}
-        for sensor_addr in self.source_index[source]:
-            sensor = self.source_index[source][sensor_addr]
+        for sensor_addr, sensor in self.source_index[source].items():
             yield sensor_addr, dict(
                 sensor.get_data(skip_None=True, selected=config_keys))
 
@@ -133,8 +140,7 @@ class Sensors():
             'value', 'hits_total', 'hit_timestamp', 'interval_seconds'
         }
         for node_id in self.node_id_index:
-            for sensor_id in self.node_id_index[node_id]:
-                sensor = self.node_id_index[node_id][sensor_id]
+            for sensor_id, sensor in self.node_id_index[node_id].items():
                 yield node_id, sensor_id, dict(
                     sensor.get_data(
                         skip_None=skip_None, selected=state_metrics))
@@ -187,26 +193,22 @@ class Sensors():
 
         return changed
 
-    def __get_sensor_required_vars(self, sensor):
-        all_vars_dict = self.get_sensors_dict_by_node(skip_None=False)
+    def __get_sensor_required_vars_dict(self, sensor):
         ret = {}
 
         if sensor.eval_require is not None:
             try:
-                for var in sensor.eval_require:
-                    for node_id in sensor.eval_require[var]:
-                        for sensor_id in sensor.eval_require[var][node_id]:
-                            metric = sensor.eval_require[var][node_id][
-                                sensor_id]
-
-                            if all_vars_dict[node_id][sensor_id][metric] is not None:
-                                ret[var] = all_vars_dict[node_id][sensor_id][
-                                    metric]
+                for var, nodes in sensor.eval_require.items():
+                    for node_id, sensors in nodes.items():
+                        for sensor_id, metric_name in sensors.items():
+                            value = self.get_sensor_metric(
+                                node_id, sensor_id, metric_name)
+                            if value is not None:
+                                ret[var] = value
                             else:
                                 return {}
             except:
                 return {}
-
         return ret
 
     def __get_requiring_sensors(self, sensor):
@@ -214,10 +216,10 @@ class Sensors():
 
         for s in self.sensor_index:
             if s.eval_require is not None:
-                for var in s.eval_require:
-                    for node_id in s.eval_require[var]:
+                for var, requires in s.eval_require.items():
+                    for node_id, sensors in requires.items():
                         if node_id == sensor.node_id:
-                            for sensor_id in s.eval_require[var][node_id]:
+                            for sensor_id in sensors:
                                 if sensor_id == sensor.sensor_id and not s in x:
                                     x.add(s)
                                     yield s
@@ -225,7 +227,7 @@ class Sensors():
     def __do_requiring_eval(self, sensor, level=0):
         if level < 8:
             for s in self.__get_requiring_sensors(sensor):
-                vars_dict = self.__get_sensor_required_vars(s)
+                vars_dict = self.__get_sensor_required_vars_dict(s)
                 if s.do_eval(vars_dict=vars_dict):
                     self.__do_requiring_eval(s, level=level + 1)
 
@@ -242,25 +244,27 @@ class Sensors():
                 }))
                 self.sio.emit(
                     'event',
-                    str({
+                    json.dumps({
                         node_id: diff[node_id]
                     }),
                     broadcast=True,
                     namespace='/log')
-                for sensor_id in diff[node_id]:
+                for sensor_id, metrics in diff[node_id].items():
                     sensor = self.node_id_index[node_id][sensor_id]
-                    for var in diff[node_id][sensor_id]:
-                        if sensor.mode == ACTUATOR and var == 'value':
+                    for metric in metrics:
+                        if sensor.mode == ACTUATOR and metric == 'value':
                             logger.debug(
                                 'emit actuator event: {}.{}: {}'.format(
                                     node_id, sensor_id, sensor.value))
-                            self.sio.emit(
-                                'actuator_response',
-                                {node_id: {
-                                    sensor_id: sensor.value
-                                }},
-                                room=sensor.source,
-                                namespace='/sensors')
+                            self.sio.emit('actuator_response',
+                                          json.dumps(
+                                              {
+                                                  node_id: {
+                                                      sensor_id: sensor.value
+                                                  }
+                                              },
+                                              room=sensor.source,
+                                              namespace='/sensors'))
 
     def set_values(self, node_id, sensor_values_dict):
         changed = 0
@@ -271,7 +275,7 @@ class Sensors():
                 changed = 1
 
                 if sensor.eval_expr is not None:
-                    vars_dict = self.__get_sensor_required_vars(sensor)
+                    vars_dict = self.__get_sensor_required_vars_dict(sensor)
                     sensor.do_eval(
                         vars_dict=vars_dict,
                         update=False,

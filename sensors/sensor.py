@@ -69,12 +69,10 @@ class Sensor(ABC):
     prev_value = None
 
     def get_data(self, skip_None=False, selected={}):
-        data = self.__dict__
-
-        for x in data:
-            if (not selected) or (x in selected):
-                if not (data[x] is None and skip_None):
-                    yield x, data[x]
+        for key, value in self.__dict__.items():
+            if (not selected) or (key in selected):
+                if not (value is None and skip_None):
+                    yield key, value
 
     def get_promexport_data(self):
         t = self.get_type()
@@ -151,8 +149,8 @@ class Sensor(ABC):
         aeval = Interpreter(writer=Devnull(), err_writer=Devnull())
 
         expr = ""
-        for var_node_id in vars_dict:
-            expr += "{}={};\n".format(var_node_id, vars_dict[var_node_id])
+        for k, v in vars_dict.items():
+            expr += "{}={};\n".format(k, v)
         for k, v in self.get_data(
                 selected={
                     'value', 'prev_value', 'hits_total', 'hit_timestamp',
