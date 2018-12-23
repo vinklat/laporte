@@ -121,7 +121,7 @@ async_mode = 'gevent'
 sio = SocketIO(app, async_mode=async_mode)
 
 
-class MyNamespace(Namespace):
+class SensorsNamespace(Namespace):
     def on_sensor_response(self, message):
         logger.debug('SocketIO: {} '.format(message))
         for node_id in message:
@@ -144,8 +144,10 @@ class MyNamespace(Namespace):
         emit('pong')
 
 
-sio.on_namespace(MyNamespace('/sensors'))
+sio.on_namespace(SensorsNamespace('/sensors'))
 sensors.sio = sio
+
+
 
 ##
 ## REST API methods
@@ -166,7 +168,13 @@ class Sensor(Resource):
 
 class SensorsSource(Resource):
     def get(self, source):
-        return dict(sensors.get_sensors_addr_config(source))
+        try:
+            ret = dict(sensors.get_sensors_addr_config(source))
+        except KeyError:
+            logger.warning("source {} not found".format(source))
+            abort(404)  #not configured
+
+        return ret
 
 
 class SensorsDump(Resource):
@@ -203,7 +211,10 @@ api.add_resource(SensorsDataBySensor, '/api/sensors/by_sensor')
 
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=sio.async_mode)
+    return render_template(
+        'index.html',
+        async_mode=sio.async_mode,
+        data=sensors.get_sensors_dump_dict())
 
 
 ##

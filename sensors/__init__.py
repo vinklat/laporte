@@ -129,6 +129,19 @@ class Sensors():
     def get_sensors_dump_list(self):
         return list(self.get_sensors_dump())
 
+    def get_sensors_dump_dict(self):
+        ret = {}
+        for sensor in self.sensor_index:
+            if not sensor.source in ret:
+                ret[sensor.source] = {}
+
+            if not sensor.node_id in ret[sensor.source]:
+                ret[sensor.source][sensor.node_id] = {}
+
+            ret[sensor.source][sensor.node_id][sensor.sensor_id] = dict(
+                sensor.get_data())
+        return ret
+
     def get_sensors_addr_config(self, source):
         config_keys = {'sensor_id', 'node_id', 'mode'}
         for sensor_addr, sensor in self.source_index[source].items():

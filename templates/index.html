@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-    <title>Switchboard events</title>
+    <title>Switchboard</title>
     <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
     <script type="text/javascript" charset="utf-8">
@@ -14,19 +14,54 @@
 
             // Event handler for new connections.
             socket.on('connect', function() {
-                $('#log').append('<br>' + $('<div/>').text('connected').html());
+             $('#status').html("Socket.IO status: connected");
+            });
+
+            socket.on('disconnect', function() {
+             $('#status').html("Socket.IO status: not connected");
             });
 
             // Event handler for server sent event data.
             socket.on('event', function(msg) {
-                $('#log').append('<br>' + $('<div/>').text(msg).html());
+                obj = JSON.parse(msg);
+
+                for (node_id in obj) {
+                    for (sensor_id in obj[node_id]) {
+                        for (metric in obj[node_id][sensor_id]) {
+                            id = "#" + node_id + "_" + sensor_id + "_" + metric
+                            value = obj[node_id][sensor_id][metric]
+                            $(id).html(""+value);
+
+                        }
+                    }
+                }
+                t=new Date().toLocaleString();
+                $('#log').append('<br>' + $('<div/>').text(t + " " + msg).html());
             });
         });
     </script>
 </head>
 <body>
     <h1>Switchboard</h1>
-    <h2>Received events:</h2>
+    <div id="status"></div>
+
+    {% for source, nodes in data.items() %}
+    <div>
+        <h2>Source {{source}}:</h2>
+        {% for node_id, sensors in nodes.items() %}
+        <table>
+        <tr><th colspan=2>{{node_id}}</th></tr>
+        {% for sensor_id, sensor_data in sensors.items() %}
+        <tr>
+        <td><div>{{sensor_id}} = </div></td>
+        <td><div id="{{node_id}}_{{sensor_id}}_value">{{sensor_data.value}}</div></td>
+        </tr>
+        {% endfor %}
+        </table>
+        {% endfor %}
+    {% endfor %}
+    </div>
+    <h2>Event log:</h2>
     <div id="log"></div>
 </body>
 </html>

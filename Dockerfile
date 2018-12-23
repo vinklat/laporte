@@ -11,6 +11,7 @@ WORKDIR /switchboard
 COPY switchboard.py /switchboard/
 COPY sensors/*py /switchboard/sensors/
 COPY conf/*yml /switchboard/conf/
+COPY templates/*html /switchboard/templates/
 
 ENTRYPOINT [ "python", "./switchboard.py" ]
 
