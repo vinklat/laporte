@@ -8,18 +8,15 @@
 #   curl http://localhost:9128/api/sensor/somejob -d "success_state=on" -X PUT    
 #   curl http://localhost:9128/api/sensor/somejob -d "success_state=off" -X PUT    
 #
-# - you will always have the actual state of a job
-#   job_state may have one of the 4 states:
+# - you will always have the actual state of a job in job_state metric
+#   state may have one of these 4 states:
 #
 #  0: job is not running, success is expired (hard alert)
 #  1: job is running, success is expired (soft alert)
 #  2: job is not running, success is active (OK state)
 #  3: job is running, success is active (running OK state)
 #
-# look at the result (Firefox recommended for json response):
-#   http://localhost:9128/api/sensors/by_node
-#
-# or watch live Socket.IO log:
+#  watch status via live page
 #   http://localhost:9128
 
 
@@ -31,18 +28,19 @@ virtual:
                 # max duration of a job (example: backup time window)
                 ttl: 10
                 accept_refresh: true
+                hidden: true
 
             success_state:
                 type: switch
                 # max duration of success state (example: backup age)
                 ttl: 20
                 accept_refresh: true
+                hidden: true
 
 
             # variant 1: using logic operators
             job_state:
                 type: gauge
-                hidden: true
                 eval_require:
                     c: { somejob: { success_state: value }}
                     d: { somejob: { run_state: value }}
@@ -57,7 +55,6 @@ virtual:
             # variant 2: algorithm using ifs (some result as variant 1)
             job_state2:
                 type: gauge
-                hidden: true
                 eval_require:
                     s: { somejob: { success_state: value }}
                     r: { somejob: { run_state: value }}

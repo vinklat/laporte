@@ -6,10 +6,7 @@
 #   curl http://localhost:9128/api/sensor/switch1 -d "switch_state=on" -X PUT    
 #   curl http://localhost:9128/api/sensor/switch1 -d "switch_state=off" -X PUT    
 #
-# look at the result (Firefox recommended for json response):
-#   http://localhost:9128/api/sensors/by_node
-#
-# or watch live Socket.IO log:
+# watch status via live page
 #   http://localhost:9128
 
 
@@ -32,5 +29,5 @@ virtual:
                     sw1: { switch1: { switch_state : value }}
                     sw2: { switch2: { switch_state : value }}
 
-                # metric will be calculated
+                # value will be calculated
                 eval_expr: "sw1 or sw2"

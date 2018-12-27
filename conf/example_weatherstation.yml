@@ -4,12 +4,9 @@
 #
 # you can send metrics by curl (via rest api):
 #
-#   curl http://localhost:9128/api/metric/weather1 -d "temp_celsius=37.5" -d "hum_ratio=0.8" -X PUT
+#   curl http://localhost:9128/api/sensor/weather1 -d "temp_celsius=37.5" -d "hum_ratio=0.8" -X PUT
 #
-# look at the result (Firefox recommended for json response):
-#   http://localhost:9128/api/sensors/by_node
-#
-# or watch live Socket.IO log:
+# watch metrics via live status page
 #   http://localhost:9128
 
 virtual:

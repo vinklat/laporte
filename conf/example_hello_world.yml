@@ -5,11 +5,7 @@
 #
 #   curl http://localhost:9128/api/sensor/weather1 -d "temp_celsius=37.5" -X PUT
 #
-# and look it, for example on connected LCD display :), or
-# via API (Firefox recommended for json response):
-#   http://localhost:9128/api/sensors/by_node
-#
-# or watch live Socket.IO log:
+# and look it, for example on MQTT connected LCD display :), or via status page
 #   http://localhost:9128
 
 
