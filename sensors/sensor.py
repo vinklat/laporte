@@ -120,7 +120,10 @@ class Sensor(ABC):
             self.count_hit()
 
             if self.ttl is not None:
-                self.ttl_remaining = self.ttl
+                if self.get_type() == SWITCH and value == self.default_value:
+                    self.ttl_remaining = None
+                else:
+                    self.ttl_remaining = self.ttl
 
             if self.dataset:
                 self.data_ready = True
