@@ -261,7 +261,7 @@ class Sensors():
                         node_id: diff[node_id]
                     }),
                     broadcast=True,
-                    namespace='/log')
+                    namespace='/events')
                 for sensor_id, metrics in diff[node_id].items():
                     sensor = self.node_id_index[node_id][sensor_id]
                     for metric in metrics:
@@ -269,15 +269,15 @@ class Sensors():
                             logger.debug(
                                 'emit actuator event: {}.{}: {}'.format(
                                     node_id, sensor_id, sensor.value))
-                            self.sio.emit('actuator_response',
-                                          json.dumps(
-                                              {
-                                                  node_id: {
-                                                      sensor_id: sensor.value
-                                                  }
-                                              },
-                                              room=sensor.source,
-                                              namespace='/sensors'))
+                            self.sio.emit(
+                                'actuator_response',
+                                json.dumps({
+                                    node_id: {
+                                        sensor_id: sensor.value
+                                    }
+                                }),
+                                room=sensor.source,
+                                namespace='/sensors')
 
     def set_values(self, node_id, sensor_values_dict):
         changed = 0

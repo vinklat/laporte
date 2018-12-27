@@ -338,6 +338,8 @@ class Switch(Sensor):
         self.value = self.default_value
         self.prev_value = self.default_value
         self.hits_total = 0
+        self.interval_seconds = None
+        self.hit_timestamp = None
         self.ttl_remaining = None
 
 
@@ -375,4 +377,6 @@ class Message(Sensor):
         self.value = self.default_value
         self.prev_value = self.default_value
         self.hits_total = 0
+        self.interval_seconds = None
+        self.hit_timestamp = None
         self.ttl_remaining = None

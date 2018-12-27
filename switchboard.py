@@ -5,6 +5,7 @@ monkey.patch_all()
 from flask import Flask, request, Response, abort, render_template, session
 from flask_restful import Resource, Api
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, close_room, rooms, disconnect
+from flask_bootstrap import Bootstrap
 from gevent.pywsgi import WSGIServer, LoggingLogAdapter
 from argparse import ArgumentParser, ArgumentTypeError
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -12,6 +13,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 import yaml
+import json
 import logging
 from sensors import Sensors
 
@@ -90,6 +92,7 @@ logger.addHandler(ch)
 
 app = Flask(__name__)
 api = Api(app)
+bootstrap = Bootstrap(app)
 sensors = Sensors()
 with open(pars.sensors_fname, 'r') as stream:
     try:
@@ -144,10 +147,20 @@ class SensorsNamespace(Namespace):
         emit('pong')
 
 
+class EventsNamespace(Namespace):
+    def on_connect(self):
+        emit(
+            'event',
+            json.dumps(sensors.get_sensors_dict_by_node(skip_None=False)),
+            broadcast=True)
+
+    def on_ping(self):
+        emit('pong')
+
+
 sio.on_namespace(SensorsNamespace('/sensors'))
+sio.on_namespace(EventsNamespace('/events'))
 sensors.sio = sio
-
-
 
 ##
 ## REST API methods
@@ -210,9 +223,18 @@ api.add_resource(SensorsDataBySensor, '/api/sensors/by_sensor')
 
 
 @app.route('/')
-def index():
+@app.route('/table')
+def table():
     return render_template(
         'index.html',
+        async_mode=sio.async_mode,
+        data=sensors.get_sensors_dump_dict())
+
+
+@app.route('/log')
+def log():
+    return render_template(
+        'log.html',
         async_mode=sio.async_mode,
         data=sensors.get_sensors_dump_dict())
 
