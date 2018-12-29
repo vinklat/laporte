@@ -3,28 +3,30 @@
 {% block title %}Switchboard{% endblock %}
 
 {% block content %}
+  <table class="table">
   {% for source, nodes in data.items() %}
-  <div>
-      <h2>Source {{source}}:</h2>
-      <table class="table">
       {% for node_id, sensors in nodes.items() %}
-      <tr>
-      <th scope="col">{{node_id}}</th>
-      <th scope="col">value</th>
-      <th scope="col">hits</th>
-      <th scope="col">duration</th>
-      {% for sensor_id, sensor_data in sensors.items() %}
-      <tr>
-      <td><div>{{sensor_id}}</div></td>
-      <td><div id="{{node_id}}_{{sensor_id}}_value"></div></td>
-      <td><div id="{{node_id}}_{{sensor_id}}_hits_total"></div></td>
-      <td><div id="{{node_id}}_{{sensor_id}}_duration_seconds"></div></td>
-      </tr>
+        <thead>
+            <tr class="bg-light">
+                <th scope="col">{{node_id}} <small>[{{source}}]</small></th>
+                <th scope="col">value</th>
+                <th scope="col">hits</th>
+                <th scope="col">duration</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for sensor_id, sensor_data in sensors.items() %}
+            <tr>
+                <td scope="row"><div>{{sensor_id}}</div></td>
+                <td><div id="{{node_id}}_{{sensor_id}}_value"></div></td>
+                <td><div id="{{node_id}}_{{sensor_id}}_hits_total"></div></td>
+                <td><div id="{{node_id}}_{{sensor_id}}_duration_seconds"></div></td>
+            </tr>
+        {% endfor %}
       {% endfor %}
-      {% endfor %}
-      </table>
-    {% endfor %}
-  </div>
+        </tbody>
+  {% endfor %}
+  </table>
 {% endblock %}
 
 {% block script %}
@@ -53,23 +55,25 @@
             for (node_id in obj) {
                 for (sensor_id in obj[node_id]) {
                     for (metric in obj[node_id][sensor_id]) {
-                        id = "#" + node_id + "_" + sensor_id + "_" + metric
-                        value = obj[node_id][sensor_id][metric]
+                        id = "#" + node_id + "_" + sensor_id + "_" + metric;
+                        value = obj[node_id][sensor_id][metric];
                         switch (typeof value) {
                             case "number":
                                 if (metric == "duration_seconds") {
-                                    value = Math.round(value*10)/10
-                                    $(id).html(value.toString() + "s");
+                                    value = Math.round(value*10)/10;
+                                    if (value == 0) {
+                                        $(id).html("");
+                                    } else {
+                                        $(id).html(value.toString() + "s");
+                                    }
                                 } else {
-                                    value = Math.round(value*100)/100
+                                    value = Math.round(value*100)/100;
                                     $(id).html(value.toString());
                                 }
                                 break;
                             case "string":
+                            case "boolean":                            
                                 $(id).html(value);
-                                break;
-                            case "boolean":
-                                value ? $(id).html("ON") : $(id).html("OFF");
                                 break;
                             default:
                                 $(id).html("");
