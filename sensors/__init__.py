@@ -12,9 +12,7 @@ class Sensors():
     '''container to store sensors'''
 
     def __init__(self):
-        self.sensor_addr_index = {}
         self.node_id_index = {}
-        self.source_index = {}
         self.sensor_index = []
 
     def __add_sensor(self,
@@ -28,22 +26,17 @@ class Sensors():
         param = {
             'source': source,
             'node_id': node_id,
+            'node_addr': node_addr,
             'sensor_id': sensor_id,
             'mode': mode
         }
 
         for p in [
                 'default_value', 'accept_refresh', 'ttl', 'hidden',
-                'eval_preserve', 'eval_expr', 'eval_require', 'dataset'
+                'eval_preserve', 'eval_expr', 'eval_require', 'dataset', 'key'
         ]:
             if p in sensor_config_dict:
                 param[p] = sensor_config_dict[p]
-
-        if 'key' in sensor_config_dict and not node_addr is None:
-            sensor_addr = '{}/{}'.format(node_addr, sensor_config_dict['key'])
-            param['addr'] = sensor_addr
-        else:
-            sensor_addr = None
 
         if 'type' in sensor_config_dict:
             type = sensor_config_dict['type']
@@ -61,9 +54,6 @@ class Sensors():
 
         self.sensor_index.append(sensor)
         self.node_id_index[node_id][sensor_id] = sensor
-        if sensor_addr is not None:
-            self.sensor_addr_index[sensor_addr] = sensor
-            self.source_index[source][sensor_addr] = sensor
 
     def __add_node(self, node_id, source, node_config_dict):
         '''set up node and its sensors'''
@@ -76,7 +66,6 @@ class Sensors():
         if not node_id in self.node_id_index:
             self.node_id_index[node_id] = {}
 
-        nsensors = 0
         if 'sensors' in node_config_dict:
             for sensor_id, sensor_config_dict in node_config_dict[
                     'sensors'].items():
@@ -87,7 +76,6 @@ class Sensors():
                     sensor_id,
                     sensor_config_dict,
                     mode=SENSOR)
-                nsensors + -1
 
         if 'actuators' in node_config_dict:
             for sensor_id, sensor_config_dict in node_config_dict[
@@ -99,15 +87,10 @@ class Sensors():
                     sensor_id,
                     sensor_config_dict,
                     mode=ACTUATOR)
-                nsensors + -1
 
-        if not nsensors:
-            return 0
+
 
     def __add_source(self, source, source_config_dict):
-        if not source in self.source_index:
-            self.source_index[source] = {}
-
         for node_id, node_config_dict in source_config_dict.items():
             self.__add_node(node_id, source, node_config_dict)
 
@@ -143,10 +126,11 @@ class Sensors():
         return ret
 
     def get_sensors_addr_config(self, source):
-        config_keys = {'sensor_id', 'node_id', 'mode'}
-        for sensor_addr, sensor in self.source_index[source].items():
-            yield sensor_addr, dict(
-                sensor.get_data(skip_None=True, selected=config_keys))
+        config_keys = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
+        for sensor in self.sensor_index:
+            if sensor.source == source:
+                yield dict(
+                    sensor.get_data(skip_None=True, selected=config_keys))
 
     def get_sensors_data(self, skip_None=True):
         state_metrics = {

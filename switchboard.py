@@ -137,8 +137,12 @@ class SensorsNamespace(Namespace):
                 pass
 
     def on_join(self, message):
-        join_room(message['room'])
+        logger.debug('SocketIO client join: {} '.format(message))
+        source = message['room']
+        join_room(source)
         emit('status_response', {'joined in': rooms()})
+        emit('config_response',
+             {source: list(sensors.get_sensors_addr_config(source))})
 
     def on_connect(self):
         emit('status_response', {'status': 'connected'})
@@ -182,7 +186,7 @@ class Sensor(Resource):
 class SensorsSource(Resource):
     def get(self, source):
         try:
-            ret = dict(sensors.get_sensors_addr_config(source))
+            ret = list(sensors.get_sensors_addr_config(source))
         except KeyError:
             logger.warning("source {} not found".format(source))
             abort(404)  #not configured
