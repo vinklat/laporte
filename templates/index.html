@@ -12,13 +12,13 @@
       <th scope="col">{{node_id}}</th>
       <th scope="col">value</th>
       <th scope="col">hits</th>
-      <th scope="col">interval</th>
+      <th scope="col">duration</th>
       {% for sensor_id, sensor_data in sensors.items() %}
       <tr>
       <td><div>{{sensor_id}}</div></td>
       <td><div id="{{node_id}}_{{sensor_id}}_value"></div></td>
       <td><div id="{{node_id}}_{{sensor_id}}_hits_total"></div></td>
-      <td><div id="{{node_id}}_{{sensor_id}}_interval_seconds"></div></td>
+      <td><div id="{{node_id}}_{{sensor_id}}_duration_seconds"></div></td>
       </tr>
       {% endfor %}
       {% endfor %}
@@ -57,7 +57,7 @@
                         value = obj[node_id][sensor_id][metric]
                         switch (typeof value) {
                             case "number":
-                                if (metric == "interval_seconds") {
+                                if (metric == "duration_seconds") {
                                     value = Math.round(value*10)/10
                                     $(id).html(value.toString() + "s");
                                 } else {

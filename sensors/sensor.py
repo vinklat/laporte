@@ -63,7 +63,7 @@ class Sensor(ABC):
     value = None
     hits_total = None
     hit_timestamp = None
-    interval_seconds = None
+    duration_seconds = None
     ttl_remaining = None
     data_ready = None
     hold = None
@@ -83,8 +83,8 @@ class Sensor(ABC):
             yield 'hits_total', COUNTER, self.hits_total, ['node', 'sensor'], [
                 self.node_id, self.sensor_id
             ]
-        if self.interval_seconds is not None:
-            yield 'interval_seconds', COUNTER, self.interval_seconds, [
+        if self.duration_seconds is not None:
+            yield 'duration_seconds', COUNTER, self.duration_seconds, [
                 'node', 'sensor'
             ], [self.node_id, self.sensor_id]
 
@@ -104,7 +104,7 @@ class Sensor(ABC):
 
         timestamp = time()
         if not self.hit_timestamp is None:
-            self.interval_seconds = timestamp - self.hit_timestamp
+            self.duration_seconds = timestamp - self.hit_timestamp
         self.hit_timestamp = timestamp
 
     def set(self, value, update=True):
@@ -158,7 +158,7 @@ class Sensor(ABC):
         for k, v in self.get_data(
                 selected={
                     'value', 'prev_value', 'hits_total', 'hit_timestamp',
-                    'interval_seconds', 'ttl_remaining'
+                    'duration_seconds', 'ttl_remaining'
                 }):
             if self.get_type() == MESSAGE:
                 expr += "{}='{}';\n".format(k, v)
@@ -239,7 +239,7 @@ class Gauge(Sensor):
         self.hold = None
         self.hits_total = 0
         self.hit_timestamp = None
-        self.interval_seconds = None
+        self.duration_seconds = None
         self.reset()
 
 
@@ -280,7 +280,7 @@ class Counter(Sensor):
         self.hold = None
         self.hits_total = 0
         self.hit_timestamp = None
-        self.interval_seconds = None
+        self.duration_seconds = None
         self.reset()
 
 
@@ -345,7 +345,7 @@ class Switch(Sensor):
         self.value = self.default_value
         self.prev_value = self.default_value
         self.hits_total = 0
-        self.interval_seconds = None
+        self.duration_seconds = None
         self.hit_timestamp = None
         self.ttl_remaining = None
 
@@ -385,6 +385,6 @@ class Message(Sensor):
         self.value = self.default_value
         self.prev_value = self.default_value
         self.hits_total = 0
-        self.interval_seconds = None
+        self.duration_seconds = None
         self.hit_timestamp = None
         self.ttl_remaining = None

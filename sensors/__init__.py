@@ -88,8 +88,6 @@ class Sensors():
                     sensor_config_dict,
                     mode=ACTUATOR)
 
-
-
     def __add_source(self, source, source_config_dict):
         for node_id, node_config_dict in source_config_dict.items():
             self.__add_node(node_id, source, node_config_dict)
@@ -134,7 +132,7 @@ class Sensors():
 
     def get_sensors_data(self, skip_None=True):
         state_metrics = {
-            'value', 'hits_total', 'hit_timestamp', 'interval_seconds'
+            'value', 'hits_total', 'hit_timestamp', 'duration_seconds'
         }
         for node_id in self.node_id_index:
             for sensor_id, sensor in self.node_id_index[node_id].items():
