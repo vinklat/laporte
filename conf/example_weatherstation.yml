@@ -22,13 +22,22 @@ virtual:
                 #   - the last value will cover an indeterminate state if the sensor goes out
                 ttl: 600
 
+                # if dataset is set: 
+                #   - wait until temp_celsius and hum_ratio are both set, 
+                #     then continue eval dew_celsius, hum_grams
+                # if dataset would not be set:
+                #   - eval would be done twice
+                dataset: true
+
                 # metric will be corrected (slope +1% and shift + 0.5)
                 eval_expr: 'value * 1.01 + 0.5'
 
             hum_ratio:
                 type: gauge
                 ttl: 600
-                # percents will be stored as 0.0-1.0 (ratio)
+                dataset: true
+
+                # percents should be stored as 0.0-1.0 (ratio)
                 eval_expr: 'value / 100'
 
             dew_celsius:
@@ -37,9 +46,9 @@ virtual:
 
                 # metric will be calculated
                 eval_require:
-                    temp_celsius: { weather1: { temp_celsius: value }}
-                    hum_ratio: { weather1: { hum_ratio: value }}
-                eval_expr: >
+                    temp_celsius: [ temp_celsius, value ]
+                    hum_ratio: [ hum_ratio, value ]
+                eval_expr: |
                     l = log(hum_ratio);
                     m = 17.27 * temp_celsius;
                     n = temp_celsius + 237.3;
@@ -52,7 +61,7 @@ virtual:
 
                 # metric will be calculated
                 eval_require:
-                    dew_celsius: { weather1: { dew_celsius : value }}
-                eval_expr: >
+                    dew_celsius: [ dew_celsius, value ]
+                eval_expr: |
                     t =  8.1332 - (1762.39 / (dew_celsius + 235.66));
                     ((10**t) / 760.0) * 1000 * 18.0 / 22.4

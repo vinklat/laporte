@@ -26,8 +26,8 @@ virtual:
 
                 # this sensor monitors state of other sensors
                 eval_require:
-                    sw1: { switch1: { switch_state : value }}
-                    sw2: { switch2: { switch_state : value }}
+                    sw1: [ switch1, switch_state, value ]
+                    sw2: [ switch2, switch_state, value ]
 
                 # value will be calculated
                 eval_expr: "sw1 or sw2"

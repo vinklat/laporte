@@ -14,6 +14,7 @@ class Sensors():
     def __init__(self):
         self.node_id_index = {}
         self.sensor_index = []
+        self.sio = None
 
     def __add_sensor(self,
                      source,
@@ -98,10 +99,8 @@ class Sensors():
 
         self.prev_data = self.get_sensors_dict_by_node(skip_None=False)
 
-    def get_sensor_metric(self, node_id, sensor_id, metric):
-        v = next(self.node_id_index[node_id][sensor_id].get_data(
-            selected={metric}))[1]
-        return v
+    def __get_sensor(self, node_id, sensor_id):
+        return self.node_id_index[node_id][sensor_id]
 
     def get_sensors_dump(self):
         for sensor in self.sensor_index:
@@ -190,20 +189,38 @@ class Sensors():
 
     def __get_sensor_required_vars_dict(self, sensor):
         ret = {}
+        used_list = []
 
         if sensor.eval_require is not None:
             try:
-                for var, nodes in sensor.eval_require.items():
-                    for node_id, sensors in nodes.items():
-                        for sensor_id, metric_name in sensors.items():
-                            value = self.get_sensor_metric(
-                                node_id, sensor_id, metric_name)
-                            if value is not None:
-                                ret[var] = value
-                            else:
-                                return {}
+                for var, metric_list in sensor.eval_require.items():
+                    if len(metric_list) == 3:
+                        (node_id, sensor_id, metric_name) = tuple(metric_list)
+                    elif len(metric_list) == 2:
+                        (sensor_id, metric_name) = tuple(metric_list)
+                        node_id = sensor.node_id
+                    else:
+                        logger.error('{}.{}: error in eval_require {}'.format(
+                            node_id, sensor_id, sensor.eval_require))
+                        return {}
+
+                    sensor = self.__get_sensor(node_id, sensor_id)
+                    value = next(sensor.get_data(selected={metric_name}))[1]
+
+                    if sensor.dataset and not sensor.dataset_ready:
+                        value = None
+
+                    if value is not None:
+                        ret[var] = value
+                        used_list.append(self.__get_sensor(node_id, sensor_id))
+                    else:
+                        return {}
             except:
                 return {}
+
+        for s in used_list:
+            s.dataset_use()
+
         return ret
 
     def __get_requiring_sensors(self, sensor):
@@ -211,13 +228,16 @@ class Sensors():
 
         for s in self.sensor_index:
             if s.eval_require is not None:
-                for var, requires in s.eval_require.items():
-                    for node_id, sensors in requires.items():
-                        if node_id == sensor.node_id:
-                            for sensor_id in sensors:
-                                if sensor_id == sensor.sensor_id and not s in x:
-                                    x.add(s)
-                                    yield s
+                for var, metric_list in s.eval_require.items():
+                    if len(metric_list) == 3:
+                        (node_id, sensor_id, metric_name) = tuple(metric_list)
+                    elif len(metric_list) == 2:
+                        (sensor_id, metric_name) = tuple(metric_list)
+                        node_id = s.node_id
+
+                    if node_id == sensor.node_id and sensor_id == sensor.sensor_id and not s in x:
+                        x.add(s)
+                        yield s
 
     def __do_requiring_eval(self, sensor, level=0):
         if level < 8:
@@ -226,7 +246,10 @@ class Sensors():
                 if s.do_eval(vars_dict=vars_dict):
                     self.__do_requiring_eval(s, level=level + 1)
 
-    sio = None
+    def __used_dataset_reset(self):
+        for s in self.sensor_index:
+            if s.dataset_used:
+                s.dataset_reset()
 
     def emit_changes(self, diff):
         ''' emit sensor data of chaged nodes to SocketIO event log namespace'''
@@ -245,7 +268,7 @@ class Sensors():
                     broadcast=True,
                     namespace='/events')
                 for sensor_id, metrics in diff[node_id].items():
-                    sensor = self.node_id_index[node_id][sensor_id]
+                    sensor = self.__get_sensor(node_id, sensor_id)
                     for metric in metrics:
                         if sensor.mode == ACTUATOR and metric == 'value':
                             logger.debug(
@@ -265,7 +288,7 @@ class Sensors():
         changed = 0
 
         for sensor_id in sensor_values_dict:
-            sensor = self.node_id_index[node_id][sensor_id]
+            sensor = self.__get_sensor(node_id, sensor_id)
             if sensor.set(sensor_values_dict[sensor_id]):
                 changed = 1
 
@@ -277,6 +300,7 @@ class Sensors():
                         preserve_override=True)
 
                 self.__do_requiring_eval(sensor)
+                self.__used_dataset_reset()
 
         changes = {}
         if changed:
@@ -296,6 +320,7 @@ class Sensors():
                 logger.debug("scheduler: {}.{} ttl timed out".format(
                     sensor.node_id, sensor.sensor_id))
                 self.__do_requiring_eval(sensor)
+                self.__used_dataset_reset()
 
         changes = {}
         if changed:

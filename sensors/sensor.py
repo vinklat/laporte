@@ -61,13 +61,14 @@ class Sensor(ABC):
 
     #state attributes
     value = None
+    prev_value = None
     hits_total = None
     hit_timestamp = None
     duration_seconds = None
     ttl_remaining = None
-    data_ready = None
+    dataset_ready = None
+    dataset_used = None
     hold = None
-    prev_value = None
 
     def get_data(self, skip_None=False, selected={}):
         for key, value in self.__dict__.items():
@@ -127,7 +128,7 @@ class Sensor(ABC):
                     self.ttl_remaining = self.ttl
 
             if self.dataset:
-                self.data_ready = True
+                self.dataset_ready = True
 
         return 1
 
@@ -189,6 +190,15 @@ class Sensor(ABC):
 
         return 0
 
+    def dataset_use(self):
+        if self.dataset:
+            self.dataset_used = True
+
+    def dataset_reset(self):
+        if self.dataset:
+            self.dataset_ready = False
+            self.dataset_used = False
+
     def dec_ttl(self, interval=1):
         if self.ttl_remaining is not None:
             if self.ttl_remaining > 0:
@@ -209,7 +219,8 @@ class Gauge(Sensor):
     def reset(self):
         self.value = self.default_value
         self.ttl_remaining = None
-        self.data_ready = False
+        self.dataset_ready = False
+        self.dataset_used = False
 
     def fix_value(self, value):
         if type(value) is str:
@@ -250,7 +261,8 @@ class Counter(Sensor):
     def reset(self):
         self.value = self.default_value
         self.ttl_remaining = None
-        self.data_ready = False
+        self.dataset_ready = False
+        self.dataset_used = False
 
     def fix_value(self, value):
         if type(value) is str:
@@ -292,7 +304,6 @@ class Switch(Sensor):
         self.value = self.default_value
         self.count_hit()
         self.ttl_remaining = None
-        self.data_ready = False
 
     def fix_value(self, value):
         m = {
@@ -348,6 +359,8 @@ class Switch(Sensor):
         self.duration_seconds = None
         self.hit_timestamp = None
         self.ttl_remaining = None
+        self.dataset_ready = False
+        self.dataset_used = False
 
 
 class Message(Sensor):
@@ -357,7 +370,8 @@ class Message(Sensor):
     def reset(self):
         self.value = self.default_value
         self.ttl_remaining = None
-        self.data_ready = False
+        self.dataset_ready = False
+        self.dataset_used = False
 
     def fix_value(self, value):
         return value

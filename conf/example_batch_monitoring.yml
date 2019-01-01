@@ -42,8 +42,8 @@ virtual:
             job_state:
                 type: gauge
                 eval_require:
-                    c: { somejob: { success_state: value }}
-                    d: { somejob: { run_state: value }}
+                    c: [ success_state, value ]
+                    d: [ run_state, value ]
                 default_value: 0
                 eval_expr: |
                     a = True if value == 2 or value == 3 else False
@@ -56,8 +56,8 @@ virtual:
             job_state2:
                 type: gauge
                 eval_require:
-                    s: { somejob: { success_state: value }}
-                    r: { somejob: { run_state: value }}
+                    s: [ success_state, value ]
+                    r: [ run_state, value ]
                 default_value: 0
                 eval_expr: |
                     S = value

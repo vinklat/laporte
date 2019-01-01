@@ -19,8 +19,6 @@ virtual:
             temp_string:
                 type: message
                 eval_require:
-                    t: { weather1: { temp_celsius: value }}
+                    t: [ weather1, temp_celsius, value ]
                 eval_expr: |
                     "hello world! temperature is {}°C".format(t)
-                    
-                
