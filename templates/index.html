@@ -72,9 +72,11 @@
                                 }
                                 break;
                             case "string":
-                            case "boolean":                            
                                 $(id).html(value);
                                 break;
+                            case "boolean":
+                                value ? $(id).html("true") : $(id).html("false");
+                                break;                                
                             default:
                                 $(id).html("");
                                 break;
