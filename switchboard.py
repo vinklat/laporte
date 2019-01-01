@@ -12,6 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+import jinja2
 import yaml
 import json
 import logging
@@ -46,6 +47,12 @@ parser.add_argument(
     help='sensor config yaml file',
     type=str,
     default='conf/sensors.yml')
+parser.add_argument(
+    '-j',
+    '--jinja2',
+    action='store_true',
+    dest='jinja2',
+    help='use jinja2 in sensor config yaml file')
 
 LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 
@@ -96,10 +103,16 @@ bootstrap = Bootstrap(app)
 sensors = Sensors()
 with open(pars.sensors_fname, 'r') as stream:
     try:
-        config_dict = yaml.load(stream)
-        sensors.add_sensors(config_dict)
-    except yaml.YAMLError as exc:
+        if pars.jinja2:
+            t = jinja2.Template(stream.read())
+            config_dict = yaml.load(t.render())
+        else:
+            config_dict = yaml.load(stream)
+    except (yaml.YAMLError, jinja2.exceptions.TemplateSyntaxError) as exc:
         logger.error(exc)
+        exit(1)
+
+    sensors.add_sensors(config_dict)
 
 REGISTRY.register(sensors.CustomCollector(sensors))
 

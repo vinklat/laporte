@@ -6,4 +6,5 @@ prometheus_client
 apscheduler
 gevent
 pyyaml
+jinja2
 asteval
