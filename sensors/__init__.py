@@ -17,7 +17,7 @@ class Sensors():
         self.sio = None
 
     def __add_sensor(self,
-                     source,
+                     gw,
                      node_id,
                      node_addr,
                      sensor_id,
@@ -25,7 +25,7 @@ class Sensors():
                      mode=SENSOR):
 
         param = {
-            'source': source,
+            'gw': gw,
             'node_id': node_id,
             'node_addr': node_addr,
             'sensor_id': sensor_id,
@@ -56,7 +56,7 @@ class Sensors():
         self.sensor_index.append(sensor)
         self.node_id_index[node_id][sensor_id] = sensor
 
-    def __add_node(self, node_id, source, node_config_dict):
+    def __add_node(self, node_id, gw, node_config_dict):
         '''set up node and its sensors'''
 
         if 'addr' in node_config_dict:
@@ -71,7 +71,7 @@ class Sensors():
             for sensor_id, sensor_config_dict in node_config_dict[
                     'sensors'].items():
                 self.__add_sensor(
-                    source,
+                    gw,
                     node_id,
                     node_addr,
                     sensor_id,
@@ -82,20 +82,20 @@ class Sensors():
             for sensor_id, sensor_config_dict in node_config_dict[
                     'actuators'].items():
                 self.__add_sensor(
-                    source,
+                    gw,
                     node_id,
                     node_addr,
                     sensor_id,
                     sensor_config_dict,
                     mode=ACTUATOR)
 
-    def __add_source(self, source, source_config_dict):
-        for node_id, node_config_dict in source_config_dict.items():
-            self.__add_node(node_id, source, node_config_dict)
+    def __add_gw(self, gw, gw_config_dict):
+        for node_id, node_config_dict in gw_config_dict.items():
+            self.__add_node(node_id, gw, node_config_dict)
 
     def add_sensors(self, config_dict):
-        for source, source_config_dict in config_dict.items():
-            self.__add_source(source, source_config_dict)
+        for gw, gw_config_dict in config_dict.items():
+            self.__add_gw(gw, gw_config_dict)
 
         self.prev_data = self.get_sensors_dict_by_node(skip_None=False)
 
@@ -112,20 +112,20 @@ class Sensors():
     def get_sensors_dump_dict(self):
         ret = {}
         for sensor in self.sensor_index:
-            if not sensor.source in ret:
-                ret[sensor.source] = {}
+            if not sensor.gw in ret:
+                ret[sensor.gw] = {}
 
-            if not sensor.node_id in ret[sensor.source]:
-                ret[sensor.source][sensor.node_id] = {}
+            if not sensor.node_id in ret[sensor.gw]:
+                ret[sensor.gw][sensor.node_id] = {}
 
-            ret[sensor.source][sensor.node_id][sensor.sensor_id] = dict(
+            ret[sensor.gw][sensor.node_id][sensor.sensor_id] = dict(
                 sensor.get_data())
         return ret
 
-    def get_sensors_addr_config(self, source):
+    def get_sensors_addr_config(self, gw):
         config_keys = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
         for sensor in self.sensor_index:
-            if sensor.source == source:
+            if sensor.gw == gw:
                 yield dict(
                     sensor.get_data(skip_None=True, selected=config_keys))
 
@@ -281,7 +281,7 @@ class Sensors():
                                         sensor_id: sensor.value
                                     }
                                 }),
-                                room=sensor.source,
+                                room=sensor.gw,
                                 namespace='/sensors')
 
     def set_values(self, node_id, sensor_values_dict):

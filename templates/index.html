@@ -4,11 +4,11 @@
 
 {% block content %}
   <table class="table">
-  {% for source, nodes in data.items() %}
+  {% for gw, nodes in data.items() %}
       {% for node_id, sensors in nodes.items() %}
         <thead>
             <tr class="bg-light">
-                <th scope="col">{{node_id}} <small>[{{source}}]</small></th>
+                <th scope="col">{{node_id}} <small>[{{gw}}]</small></th>
                 <th scope="col">value</th>
                 <th scope="col">hits</th>
                 <th scope="col">duration</th>

@@ -151,11 +151,11 @@ class SensorsNamespace(Namespace):
 
     def on_join(self, message):
         logger.debug('SocketIO client join: {} '.format(message))
-        source = message['room']
-        join_room(source)
+        gw = message['room']
+        join_room(gw)
         emit('status_response', {'joined in': rooms()})
         emit('config_response',
-             {source: list(sensors.get_sensors_addr_config(source))})
+             {gw: list(sensors.get_sensors_addr_config(gw))})
 
     def on_connect(self):
         emit('status_response', {'status': 'connected'})
@@ -197,11 +197,11 @@ class Sensor(Resource):
 
 
 class SensorsSource(Resource):
-    def get(self, source):
+    def get(self, gw):
         try:
-            ret = list(sensors.get_sensors_addr_config(source))
+            ret = list(sensors.get_sensors_addr_config(gw))
         except KeyError:
-            logger.warning("source {} not found".format(source))
+            logger.warning("gw {} not found".format(gw))
             abort(404)  #not configured
 
         return ret
@@ -228,7 +228,7 @@ class SensorsDataBySensor(Resource):
 
 
 api.add_resource(Sensor, '/api/sensor/<string:node_id>')
-api.add_resource(SensorsSource, '/api/sensors/source/<string:source>')
+api.add_resource(SensorsSource, '/api/sensors/gw/<string:gw>')
 api.add_resource(SensorsDump, '/api/sensors/dump')
 api.add_resource(SensorsData, '/api/sensors')
 api.add_resource(SensorsDataByNode, '/api/sensors/by_node')

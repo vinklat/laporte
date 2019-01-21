@@ -33,11 +33,11 @@ class Sensor(ABC):
     eval_expr = None
     dataset = None  #not used yet
     node_id = None
-    source = None
+    gw = None
 
     def setup(self, sensor_id, node_addr, key, mode, default_value,
               accept_refresh, ttl, hidden, eval_preserve, eval_expr, dataset,
-              eval_require, node_id, source):
+              eval_require, node_id, gw):
         self.node_addr = node_addr
         self.key = key
         self.sensor_id = sensor_id
@@ -51,7 +51,7 @@ class Sensor(ABC):
         self.dataset = dataset
         self.eval_require = eval_require
         self.node_id = node_id
-        self.source = source
+        self.gw = gw
 
     @abstractmethod
     def get_type(self):
@@ -234,11 +234,11 @@ class Gauge(Sensor):
                  dataset=False,
                  eval_require=None,
                  node_id=None,
-                 source=None):
+                 gw=None):
 
         self.setup(sensor_id, node_addr, key, mode, default_value,
                    accept_refresh, ttl, hidden, eval_preserve, eval_expr,
-                   dataset, eval_require, node_id, source)
+                   dataset, eval_require, node_id, gw)
 
         self.hold = None
         self.hits_total = 0
@@ -276,11 +276,11 @@ class Counter(Sensor):
                  dataset=False,
                  eval_require=None,
                  node_id=None,
-                 source=None):
+                 gw=None):
 
         self.setup(sensor_id, node_addr, key, mode, default_value,
                    accept_refresh, ttl, hidden, eval_preserve, eval_expr,
-                   dataset, eval_require, node_id, source)
+                   dataset, eval_require, node_id, gw)
 
         self.hold = None
         self.hits_total = 0
@@ -340,11 +340,11 @@ class Switch(Sensor):
                  dataset=False,
                  eval_require=None,
                  node_id=None,
-                 source=None):
+                 gw=None):
 
         self.setup(sensor_id, node_addr, key, mode, default_value,
                    accept_refresh, ttl, hidden, eval_preserve, eval_expr,
-                   dataset, eval_require, node_id, source)
+                   dataset, eval_require, node_id, gw)
         self.hold = None
         self.value = self.default_value
         self.prev_value = self.default_value
@@ -383,11 +383,11 @@ class Message(Sensor):
                  dataset=False,
                  eval_require=None,
                  node_id=None,
-                 source=None):
+                 gw=None):
 
         self.setup(sensor_id, node_addr, key, mode, default_value,
                    accept_refresh, ttl, hidden, eval_preserve, eval_expr,
-                   dataset, eval_require, node_id, source)
+                   dataset, eval_require, node_id, gw)
         self.hold = None
         self.value = self.default_value
         self.prev_value = self.default_value
