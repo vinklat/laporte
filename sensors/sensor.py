@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from asteval import Interpreter
+from asteval import Interpreter, make_symbol_table
 from time import time
+import numpy as np
 import logging
 
 # create logger
@@ -151,30 +152,22 @@ class Sensor(ABC):
             def write(self, *_):
                 pass
 
-        aeval = Interpreter(writer=Devnull(), err_writer=Devnull())
+        syms = make_symbol_table(
+            use_numpy=True,
+            **vars_dict,
+            **dict(
+                self.get_data(
+                    selected={
+                        'value', 'prev_value', 'hits_total', 'hit_timestamp',
+                        'duration_seconds', 'ttl_remaining'
+                    })))
 
-        expr = ""
-        for k, v in vars_dict.items():
-            expr += "{}={};\n".format(k, v)
-        for k, v in self.get_data(
-                selected={
-                    'value', 'prev_value', 'hits_total', 'hit_timestamp',
-                    'duration_seconds', 'ttl_remaining'
-                }):
-            if self.get_type() == MESSAGE:
-                expr += "{}='{}';\n".format(k, v)
-            else:
-                expr += "{}={};\n".format(k, v)
-
-        expr += self.eval_expr
-
-        logger.debug("complete eval expr {}:\n{}".format(
-            {
-                self.node_id: self.sensor_id
-            }, expr))
+        aeval = Interpreter(
+            writer=Devnull(), err_writer=Devnull(), symtable=syms)
+        #logger.debug("eval symtable:\n{}".format(aeval.symtable))
 
         try:
-            x = aeval.eval(expr)
+            x = aeval.eval(self.eval_expr)
         except:
             logger.error("aeval {}".format({self.node_id: self.sensor_id}))
             return 0
