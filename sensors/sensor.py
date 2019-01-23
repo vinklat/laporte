@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from asteval import Interpreter, make_symbol_table
 from time import time
+import re
 import numpy as np
 import logging
 
@@ -160,7 +161,8 @@ class Sensor(ABC):
                     selected={
                         'value', 'prev_value', 'hits_total', 'hit_timestamp',
                         'duration_seconds', 'ttl_remaining'
-                    })))
+                    })),
+            re = re)
 
         aeval = Interpreter(
             writer=Devnull(), err_writer=Devnull(), symtable=syms)
