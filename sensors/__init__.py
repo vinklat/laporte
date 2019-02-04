@@ -1,6 +1,7 @@
 from sensors.sensor import Gauge, Counter, Switch, Message
 from sensors.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
+from copy import copy
 import json
 import logging
 
@@ -13,6 +14,8 @@ class Sensors():
 
     def __init__(self):
         self.node_id_index = {}
+        self.node_template_index = {}
+        self.sensor_template_index = {}
         self.sensor_index = []
         self.sio = None
 
@@ -22,6 +25,7 @@ class Sensors():
                      node_addr,
                      sensor_id,
                      sensor_config_dict,
+                     template=False,
                      mode=SENSOR):
 
         param = {
@@ -40,32 +44,40 @@ class Sensors():
                 param[p] = sensor_config_dict[p]
 
         if 'type' in sensor_config_dict:
-            type = sensor_config_dict['type']
+            t = sensor_config_dict['type']
         else:
-            type = 'gauge'
+            t = 'gauge'
 
-        m = {
-            'gauge': Gauge(**param),
-            'counter': Counter(**param),
-            'switch': Switch(**param),
-            'message': Message(**param)
-        }
+        if t == 'message':
+            sensor = Message(**param)
+        elif t == 'counter':
+            sensor = Counter(**param)
+        elif t == 'switch':
+            sensor = Switch(**param)
+        else:
+            sensor = Gauge(**param)
 
-        sensor = m[type]
+        if not template:
+            self.sensor_index.append(sensor)
+            self.node_id_index[node_id][sensor_id] = sensor
+        else:
+            self.node_template_index[node_id][sensor_id] = sensor
+            self.sensor_template_index[sensor_id] = node_id
 
-        self.sensor_index.append(sensor)
-        self.node_id_index[node_id][sensor_id] = sensor
-
-    def __add_node(self, node_id, gw, node_config_dict):
+    def __add_node(self, node_id, gw, node_config_dict, template=False):
         '''set up node and its sensors'''
 
-        if 'addr' in node_config_dict:
+        if 'addr' in node_config_dict and not template:
             node_addr = node_config_dict['addr']
         else:
             node_addr = None
 
-        if not node_id in self.node_id_index:
-            self.node_id_index[node_id] = {}
+        if not template:
+            if not node_id in self.node_id_index:
+                self.node_id_index[node_id] = {}
+        else:
+            if not node_id in self.node_template_index:
+                self.node_template_index[node_id] = {}
 
         if 'sensors' in node_config_dict:
             for sensor_id, sensor_config_dict in node_config_dict[
@@ -76,6 +88,7 @@ class Sensors():
                     node_addr,
                     sensor_id,
                     sensor_config_dict,
+                    template=template,
                     mode=SENSOR)
 
         if 'actuators' in node_config_dict:
@@ -87,11 +100,15 @@ class Sensors():
                     node_addr,
                     sensor_id,
                     sensor_config_dict,
+                    template=template,
                     mode=ACTUATOR)
 
     def __add_gw(self, gw, gw_config_dict):
         for node_id, node_config_dict in gw_config_dict.items():
-            self.__add_node(node_id, gw, node_config_dict)
+            if type(node_id) == int:
+                self.__add_node(node_id, gw, node_config_dict, template=True)
+            else:
+                self.__add_node(node_id, gw, node_config_dict)
 
     def add_sensors(self, config_dict):
         for gw, gw_config_dict in config_dict.items():
@@ -288,6 +305,18 @@ class Sensors():
         changed = 0
 
         for sensor_id in sensor_values_dict:
+            if (not node_id in self.node_id_index) and (
+                    sensor_id in self.sensor_template_index):
+                logger.debug(
+                    "setup new node {} from template.".format(node_id))
+                self.node_id_index[node_id] = {}
+                t = self.sensor_template_index[sensor_id]
+                for sx_id, sx in self.node_template_index[t].items():
+                    sensor = copy(sx)
+                    sensor.node_id = node_id
+                    self.node_id_index[node_id][sx_id] = sensor
+                    self.sensor_index.append(sensor)
+
             sensor = self.__get_sensor(node_id, sensor_id)
             if sensor.set(sensor_values_dict[sensor_id]):
                 changed = 1
