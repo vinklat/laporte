@@ -6,7 +6,7 @@ import json
 import logging
 
 # create logger
-logger = logging.getLogger('switchboard.sensors')
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 class Sensors():
@@ -217,7 +217,7 @@ class Sensors():
                         (sensor_id, metric_name) = tuple(metric_list)
                         node_id = sensor.node_id
                     else:
-                        logger.error('{}.{}: error in eval_require {}'.format(
+                        logging.error('{}.{}: error in eval_require {}'.format(
                             node_id, sensor_id, sensor.eval_require))
                         return {}
 
@@ -273,7 +273,7 @@ class Sensors():
 
         if diff and self.sio is not None:
             for node_id in diff:
-                logger.info('complete sensor changes: {}'.format({
+                logging.info('complete sensor changes: {}'.format({
                     node_id:
                     diff[node_id]
                 }))
@@ -288,7 +288,7 @@ class Sensors():
                     sensor = self.__get_sensor(node_id, sensor_id)
                     for metric in metrics:
                         if sensor.mode == ACTUATOR and metric == 'value':
-                            logger.debug(
+                            logging.debug(
                                 'emit actuator event: {}.{}: {}'.format(
                                     node_id, sensor_id, sensor.value))
                             self.sio.emit(
@@ -307,7 +307,7 @@ class Sensors():
         for sensor_id in sensor_values_dict:
             if (not node_id in self.node_id_index) and (
                     sensor_id in self.sensor_template_index):
-                logger.debug(
+                logging.debug(
                     "setup new node {} from template.".format(node_id))
                 self.node_id_index[node_id] = {}
                 t = self.sensor_template_index[sensor_id]
@@ -346,7 +346,7 @@ class Sensors():
         for sensor in self.sensor_index:
             if sensor.dec_ttl():
                 changed = 1
-                logger.debug("scheduler: {}.{} ttl timed out".format(
+                logging.debug("scheduler: {}.{} ttl timed out".format(
                     sensor.node_id, sensor.sensor_id))
                 self.__do_requiring_eval(sensor)
                 self.__used_dataset_reset()

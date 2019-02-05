@@ -6,7 +6,7 @@ import numpy as np
 import logging
 
 # create logger
-logger = logging.getLogger('switchboard.sensor')
+logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 SENSOR = 1
 ACTUATOR = 2
@@ -166,22 +166,21 @@ class Sensor(ABC):
 
         aeval = Interpreter(
             writer=Devnull(), err_writer=Devnull(), symtable=syms)
-        #logger.debug("eval symtable:\n{}".format(aeval.symtable))
 
         try:
             x = aeval.eval(self.eval_expr)
         except:
-            logger.error("aeval {}".format({self.node_id: self.sensor_id}))
+            logging.error("aeval {}".format({self.node_id: self.sensor_id}))
             return 0
 
         if not x is None:
-            logger.info("eval: {}".format({self.node_id: {self.sensor_id: x}}))
+            logging.info("eval: {}".format({self.node_id: {self.sensor_id: x}}))
             return self.set(x, update=update)
         else:
-            logger.debug("can't eval {}.{}".format(self.node_id,
+            logging.debug("can't eval {}.{}".format(self.node_id,
                                                    self.sensor_id))
             if len(aeval.error) > 0:
-                logger.debug(aeval.error[0].get_error())
+                logging.debug(aeval.error[0].get_error())
 
         return 0
 

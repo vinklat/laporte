@@ -18,6 +18,9 @@ import json
 import logging
 from sensors import Sensors
 
+# create logger
+logger = logging.getLogger(__name__)
+
 ##
 ## cmd line argument parser
 ##
@@ -82,16 +85,13 @@ parser.add_argument(
 pars = parser.parse_args()
 
 ##
-## create logger
+## set logger
 ##
 
-logger = logging.getLogger('switchboard')
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(pars.log_level)
-formatter = logging.Formatter('%(levelname)s %(name)s - %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
+logging.basicConfig(
+    format='%(levelname)s %(module)s: %(message)s', level=pars.log_level)
+logging.getLogger('apscheduler').setLevel(logging.WARNING)
+
 
 ##
 ## create application
@@ -190,13 +190,13 @@ class Sensor(Resource):
         try:
             ret = sensors.set_values(node_id, request.form)
         except KeyError:
-            logger.warning("node {} not found".format(node_id))
+            logger.warning("node {} or sensor not found".format(node_id))
             abort(404)  #not configured
 
         return ret
 
 
-class SensorsSource(Resource):
+class SensorsGw(Resource):
     def get(self, gw):
         try:
             ret = list(sensors.get_sensors_addr_config(gw))
@@ -228,7 +228,7 @@ class SensorsDataBySensor(Resource):
 
 
 api.add_resource(Sensor, '/api/sensor/<string:node_id>')
-api.add_resource(SensorsSource, '/api/sensors/gw/<string:gw>')
+api.add_resource(SensorsGw, '/api/sensors/gw/<string:gw>')
 api.add_resource(SensorsDump, '/api/sensors/dump')
 api.add_resource(SensorsData, '/api/sensors')
 api.add_resource(SensorsDataByNode, '/api/sensors/by_node')
