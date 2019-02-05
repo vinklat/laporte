@@ -92,7 +92,6 @@ logging.basicConfig(
     format='%(levelname)s %(module)s: %(message)s', level=pars.log_level)
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
-
 ##
 ## create application
 ##
@@ -154,8 +153,7 @@ class SensorsNamespace(Namespace):
         gw = message['room']
         join_room(gw)
         emit('status_response', {'joined in': rooms()})
-        emit('config_response',
-             {gw: list(sensors.get_sensors_addr_config(gw))})
+        emit('config_response', {gw: list(sensors.get_config_of_gw(gw))})
 
     def on_connect(self):
         emit('status_response', {'status': 'connected'})
@@ -168,7 +166,7 @@ class EventsNamespace(Namespace):
     def on_connect(self):
         emit(
             'event',
-            json.dumps(sensors.get_sensors_dict_by_node(skip_None=False)),
+            json.dumps(sensors.get_metrics_dict_by_node(skip_None=False)),
             broadcast=True)
 
     def on_ping(self):
@@ -184,8 +182,9 @@ sensors.sio = sio
 ##
 
 
-class Sensor(Resource):
+class NodeMetrics(Resource):
     def put(self, node_id):
+        '''set sensor metrics of a node'''
         logger.info("API: {}: {}".format(node_id, str(request.form.to_dict())))
         try:
             ret = sensors.set_values(node_id, request.form)
@@ -195,44 +194,83 @@ class Sensor(Resource):
 
         return ret
 
+    def get(self, node_id):
+        '''get sensor metrics of a node'''
 
-class SensorsGw(Resource):
-    def get(self, gw):
         try:
-            ret = list(sensors.get_sensors_addr_config(gw))
+            ret = dict(sensors.get_metrics_of_node(node_id))
         except KeyError:
-            logger.warning("gw {} not found".format(gw))
+            logger.warning("node {} not found".format(node_id))
             abort(404)  #not configured
 
         return ret
 
 
-class SensorsDump(Resource):
+class SensorMetrics(Resource):
+    def get(self, node_id, sensor_id):
+        '''get metrics of a sensor'''
+
+        try:
+            ret = dict(sensors.get_metrics_of_sensor(node_id, sensor_id))
+        except KeyError:
+            logger.warning("node {} or sensor {} not found".format(
+                node_id, sensor_id))
+            abort(404)  #not configured
+
+        return ret
+
+
+class SensorsMetricsList(Resource):
     def get(self):
-        return sensors.get_sensors_dump_list()
+        '''get list of all metrics'''
+
+        return list(sensors.get_metrics(skip_None=False))
 
 
-class SensorsData(Resource):
+class SensorsMetricsByGw(Resource):
     def get(self):
-        return list(sensors.get_sensors_data(skip_None=False))
+        '''get all metrics sorted by gateway - node - sensor'''
+
+        return sensors.get_metrics_dict_by_gw(skip_None=False)
 
 
-class SensorsDataByNode(Resource):
+class SensorsMetricsByNode(Resource):
     def get(self):
-        return sensors.get_sensors_dict_by_node()
+        '''get all metrics sorted by node - sensor'''
+
+        return sensors.get_metrics_dict_by_node(skip_None=False)
 
 
-class SensorsDataBySensor(Resource):
+class SensorsMetricsBySensor(Resource):
     def get(self):
-        return sensors.get_sensors_dict_by_sensor()
+        '''get all metrics sorted by sensor'''
+
+        return sensors.get_metrics_dict_by_sensor(skip_None=False)
 
 
-api.add_resource(Sensor, '/api/sensor/<string:node_id>')
-api.add_resource(SensorsGw, '/api/sensors/gw/<string:gw>')
-api.add_resource(SensorsDump, '/api/sensors/dump')
-api.add_resource(SensorsData, '/api/sensors')
-api.add_resource(SensorsDataByNode, '/api/sensors/by_node')
-api.add_resource(SensorsDataBySensor, '/api/sensors/by_sensor')
+class SensorsDumpByGw(Resource):
+    def get(self):
+        '''get all data of all sensors sorted by gateway - node - sensor'''
+
+        return sensors.get_sensors_dump_dict()
+
+
+class SensorsDumpList(Resource):
+    def get(self):
+        '''get list of all data of all sensors'''
+
+        return list(sensors.get_sensors_dump())
+
+
+api.add_resource(NodeMetrics, '/api/metrics/<string:node_id>')
+api.add_resource(SensorMetrics,
+                 '/api/metrics/<string:node_id>/<string:sensor_id>')
+api.add_resource(SensorsMetricsList, '/api/metrics')
+api.add_resource(SensorsMetricsByGw, '/api/metrics/by_gw')
+api.add_resource(SensorsMetricsByNode, '/api/metrics/by_node')
+api.add_resource(SensorsMetricsBySensor, '/api/metrics/by_sensor')
+api.add_resource(SensorsDumpList, '/api/dump')
+api.add_resource(SensorsDumpByGw, '/api/dump/by_gw')
 
 ##
 ## Web

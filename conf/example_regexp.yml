@@ -3,7 +3,7 @@
 #
 # you can send a string (some message) by curl
 #
-#   curl http://localhost:9128/api/sensor/reader -d "size_string='there is 1024B free space'" -X PUT
+#   curl http://localhost:9128/api/metrics/reader -d "size_string='there is 1024B free space'" -X PUT
 #
 # you will get parsed float metric size_bytes
 # (see status page http://localhost:9128)

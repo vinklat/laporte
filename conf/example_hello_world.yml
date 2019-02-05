@@ -3,7 +3,7 @@
 #
 # you can send temperature by curl
 #
-#   curl http://localhost:9128/api/sensor/weather1 -d "temp_celsius=37.5" -X PUT
+#   curl http://localhost:9128/api/metrics/weather1 -d "temp_celsius=37.5" -X PUT
 #
 # and look it, for example on MQTT connected LCD display :), or via status page
 #   http://localhost:9128

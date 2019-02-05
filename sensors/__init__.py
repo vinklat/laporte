@@ -8,6 +8,9 @@ import logging
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
+METRICS = {'value', 'hits_total', 'hit_timestamp', 'duration_seconds'}
+SETUP = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
+
 
 class Sensors():
     '''container to store sensors'''
@@ -113,18 +116,59 @@ class Sensors():
     def add_sensors(self, config_dict):
         for gw, gw_config_dict in config_dict.items():
             self.__add_gw(gw, gw_config_dict)
-
-        self.prev_data = self.get_sensors_dict_by_node(skip_None=False)
+        self.prev_data = self.get_metrics_dict_by_node(skip_None=False)
 
     def __get_sensor(self, node_id, sensor_id):
         return self.node_id_index[node_id][sensor_id]
 
+    def get_metrics_of_sensor(self, node_id, sensor_id):
+        sensor = self.__get_sensor(node_id, sensor_id)
+        return sensor.get_data(skip_None=False, selected=METRICS)
+
+    def get_metrics_of_node(self, node_id):
+        for sensor_id, sensor in self.node_id_index[node_id].items():
+            yield sensor_id, dict(
+                sensor.get_data(skip_None=False, selected=METRICS))
+
+    def get_metrics(self, skip_None=True):
+        for node_id in self.node_id_index:
+            for sensor_id, sensor in self.node_id_index[node_id].items():
+                yield node_id, sensor_id, dict(
+                    sensor.get_data(skip_None=skip_None, selected=METRICS))
+
+    def get_metrics_dict_by_gw(self, skip_None=True):
+        ret = {}
+        for node_id, sensor_id, data in self.get_metrics(skip_None=skip_None):
+            gw = self.__get_sensor(node_id, sensor_id).gw
+            if not gw in ret:
+                ret[gw] = {}
+            if not node_id in ret[gw]:
+                ret[gw][node_id] = {}
+            if not sensor_id in ret[gw][node_id]:
+                ret[gw][node_id][sensor_id] = data
+        return ret
+
+    def get_metrics_dict_by_node(self, skip_None=True):
+        ret = {}
+        for node_id, sensor_id, data in self.get_metrics(skip_None=skip_None):
+            if not node_id in ret:
+                ret[node_id] = {}
+            if not sensor_id in ret[node_id]:
+                ret[node_id][sensor_id] = data
+        return ret
+
+    def get_metrics_dict_by_sensor(self, skip_None=True):
+        ret = {}
+        for node_id, sensor_id, data in self.get_metrics(skip_None=skip_None):
+            if not sensor_id in ret:
+                ret[sensor_id] = {}
+            if not node_id in ret[sensor_id]:
+                ret[sensor_id][node_id] = data
+        return ret
+
     def get_sensors_dump(self):
         for sensor in self.sensor_index:
             yield dict(sensor.get_data())
-
-    def get_sensors_dump_list(self):
-        return list(self.get_sensors_dump())
 
     def get_sensors_dump_dict(self):
         ret = {}
@@ -139,49 +183,17 @@ class Sensors():
                 sensor.get_data())
         return ret
 
-    def get_sensors_addr_config(self, gw):
-        config_keys = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
+    def get_config_of_gw(self, gw):
         for sensor in self.sensor_index:
             if sensor.gw == gw:
-                yield dict(
-                    sensor.get_data(skip_None=True, selected=config_keys))
-
-    def get_sensors_data(self, skip_None=True):
-        state_metrics = {
-            'value', 'hits_total', 'hit_timestamp', 'duration_seconds'
-        }
-        for node_id in self.node_id_index:
-            for sensor_id, sensor in self.node_id_index[node_id].items():
-                yield node_id, sensor_id, dict(
-                    sensor.get_data(
-                        skip_None=skip_None, selected=state_metrics))
-
-    def get_sensors_dict_by_node(self, skip_None=True):
-        ret = {}
-        for node_id, sensor_id, data in self.get_sensors_data(
-                skip_None=skip_None):
-            if not node_id in ret:
-                ret[node_id] = {}
-            if not sensor_id in ret[node_id]:
-                ret[node_id][sensor_id] = data
-        return ret
-
-    def get_sensors_dict_by_sensor(self, skip_None=True):
-        ret = {}
-        for node_id, sensor_id, data in self.get_sensors_data(
-                skip_None=skip_None):
-            if not sensor_id in ret:
-                ret[sensor_id] = {}
-            if not node_id in ret[sensor_id]:
-                ret[sensor_id][node_id] = data
-        return ret
+                yield dict(sensor.get_data(skip_None=True, selected=SETUP))
 
     def __get_changed_nodes_dict(self, first={}, second={}, level=0):
         changed = {}
 
         if level == 0:
             first = self.prev_data
-            second = self.get_sensors_dict_by_node(skip_None=False)
+            second = self.get_metrics_dict_by_node(skip_None=False)
 
         for key in first:
             if (first[key] != second[key]):  #changed

@@ -45,11 +45,11 @@ We have the following scenario:
 you can control switches via REST API using curl:  
 
 ```
-curl http://localhost:9128/api/sensor/switch1 -d "switch_state=on" -X PUT
-curl http://localhost:9128/api/sensor/switch1 -d "switch_state=off" -X PUT
+curl http://localhost:9128/api/metrics/switch1 -d "switch_state=on" -X PUT
+curl http://localhost:9128/api/metrics/switch1 -d "switch_state=off" -X PUT
 ```
 #### 3) watch status
  - live status page: [http://localhost:9128](http://localhost:9128)
- - JSON response of REST API: [http://localhost:9128/api/sensors/by_node](http://localhost:9128/api/sensors/by_node)
+ - JSON response of REST API: [http://localhost:9128/api/metrics/by_node](http://localhost:9128/api/metrics/by_node)
  - prometheus metrics: [http://localhost:9128/metrics](http://localhost:9128/metrics)
 

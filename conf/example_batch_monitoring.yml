@@ -3,10 +3,10 @@
 #
 # - arrange anywhere in your job code notifying of any changes:
 #
-#   curl http://localhost:9128/api/sensor/somejob -d "run_state=on" -X PUT    
-#   curl http://localhost:9128/api/sensor/somejob -d "run_state=off" -X PUT    
-#   curl http://localhost:9128/api/sensor/somejob -d "success_state=on" -X PUT    
-#   curl http://localhost:9128/api/sensor/somejob -d "success_state=off" -X PUT    
+#   curl http://localhost:9128/api/metrics/somejob -d "run_state=on" -X PUT    
+#   curl http://localhost:9128/api/metrics/somejob -d "run_state=off" -X PUT    
+#   curl http://localhost:9128/api/metrics/somejob -d "success_state=on" -X PUT    
+#   curl http://localhost:9128/api/metrics/somejob -d "success_state=off" -X PUT    
 #
 # - you will always have the actual state of a job in job_state metric
 #   state may have one of these 4 states:

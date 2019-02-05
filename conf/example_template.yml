@@ -3,8 +3,8 @@
 #
 # you can send temperature by curl
 #
-#   curl http://localhost:9128/api/sensor/weather1 -d "temp_celsius=1.5" -X PUT
-#   curl http://localhost:9128/api/sensor/weather2 -d "temp_celsius=-1.5" -X PUT
+#   curl http://localhost:9128/api/metrics/weather1 -d "temp_celsius=1.5" -X PUT
+#   curl http://localhost:9128/api/metrics/weather2 -d "temp_celsius=-1.5" -X PUT
 #
 # nodes weather1 and weather2 will be created instantly after first hit
 #

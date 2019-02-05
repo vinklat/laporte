@@ -3,8 +3,8 @@
 # - turns on the light when at least one switch is turned on
 #
 # you can control the switch by curl (rest api):
-#   curl http://localhost:9128/api/sensor/switch1 -d "switch_state=on" -X PUT    
-#   curl http://localhost:9128/api/sensor/switch1 -d "switch_state=off" -X PUT    
+#   curl http://localhost:9128/api/metrics/switch1 -d "switch_state=on" -X PUT    
+#   curl http://localhost:9128/api/metrics/switch1 -d "switch_state=off" -X PUT    
 #
 # watch status via live page
 #   http://localhost:9128

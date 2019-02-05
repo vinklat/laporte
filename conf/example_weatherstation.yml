@@ -4,7 +4,7 @@
 #
 # you can send metrics by curl (via rest api):
 #
-#   curl http://localhost:9128/api/sensor/weather1 -d "temp_celsius=37.5" -d "hum_ratio=0.8" -X PUT
+#   curl http://localhost:9128/api/metrics/weather1 -d "temp_celsius=37.5" -d "hum_ratio=0.8" -X PUT
 #
 # watch metrics via live status page
 #   http://localhost:9128
