@@ -3,7 +3,7 @@
 from gevent import monkey
 monkey.patch_all()
 from flask import Flask, request, Response, abort, render_template, session
-from flask_restful import Resource, Api
+from flask_restplus import Api, Resource, fields
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, close_room, rooms, disconnect
 from flask_bootstrap import Bootstrap
 from gevent.pywsgi import WSGIServer, LoggingLogAdapter
@@ -181,7 +181,7 @@ sensors.sio = sio
 ## REST API methods
 ##
 
-
+@api.route('/api/metrics/<string:node_id>')
 class NodeMetrics(Resource):
     def put(self, node_id):
         '''set sensor metrics of a node'''
@@ -205,7 +205,7 @@ class NodeMetrics(Resource):
 
         return ret
 
-
+@api.route('/api/metrics/<string:node_id>/<string:sensor_id>')
 class SensorMetrics(Resource):
     def get(self, node_id, sensor_id):
         '''get metrics of a sensor'''
@@ -219,7 +219,7 @@ class SensorMetrics(Resource):
 
         return ret
 
-
+@api.route('/api/metrics')
 class SensorsMetricsList(Resource):
     def get(self):
         '''get list of all metrics'''
@@ -227,6 +227,7 @@ class SensorsMetricsList(Resource):
         return list(sensors.get_metrics(skip_None=False))
 
 
+@api.route('/api/metrics/by_gw')
 class SensorsMetricsByGw(Resource):
     def get(self):
         '''get all metrics sorted by gateway - node - sensor'''
@@ -234,6 +235,7 @@ class SensorsMetricsByGw(Resource):
         return sensors.get_metrics_dict_by_gw(skip_None=False)
 
 
+@api.route('/api/metrics/by_node')
 class SensorsMetricsByNode(Resource):
     def get(self):
         '''get all metrics sorted by node - sensor'''
@@ -241,6 +243,7 @@ class SensorsMetricsByNode(Resource):
         return sensors.get_metrics_dict_by_node(skip_None=False)
 
 
+@api.route('/api/metrics/by_sensor')
 class SensorsMetricsBySensor(Resource):
     def get(self):
         '''get all metrics sorted by sensor'''
@@ -248,6 +251,7 @@ class SensorsMetricsBySensor(Resource):
         return sensors.get_metrics_dict_by_sensor(skip_None=False)
 
 
+@api.route('/api/dump')
 class SensorsDumpByGw(Resource):
     def get(self):
         '''get all data of all sensors sorted by gateway - node - sensor'''
@@ -255,22 +259,13 @@ class SensorsDumpByGw(Resource):
         return sensors.get_sensors_dump_dict()
 
 
+@api.route('/api/dump/by_gw')
 class SensorsDumpList(Resource):
     def get(self):
         '''get list of all data of all sensors'''
 
         return list(sensors.get_sensors_dump())
 
-
-api.add_resource(NodeMetrics, '/api/metrics/<string:node_id>')
-api.add_resource(SensorMetrics,
-                 '/api/metrics/<string:node_id>/<string:sensor_id>')
-api.add_resource(SensorsMetricsList, '/api/metrics')
-api.add_resource(SensorsMetricsByGw, '/api/metrics/by_gw')
-api.add_resource(SensorsMetricsByNode, '/api/metrics/by_node')
-api.add_resource(SensorsMetricsBySensor, '/api/metrics/by_sensor')
-api.add_resource(SensorsDumpList, '/api/dump')
-api.add_resource(SensorsDumpByGw, '/api/dump/by_gw')
 
 ##
 ## Web

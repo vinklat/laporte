@@ -1,5 +1,5 @@
 flask
-flask-restful
+flask-restplus
 flask-socketio
 bootstrap_flask
 prometheus_client
