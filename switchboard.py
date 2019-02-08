@@ -2,7 +2,7 @@
 
 from gevent import monkey
 monkey.patch_all()
-from flask import Flask, request, Response, abort, render_template, session
+from flask import Flask, Blueprint, request, Response, abort, render_template, session
 from flask_restplus import Api, Resource, fields
 from flask_socketio import SocketIO, Namespace, emit, join_room, leave_room, close_room, rooms, disconnect
 from flask_bootstrap import Bootstrap
@@ -97,7 +97,8 @@ logging.getLogger('apscheduler').setLevel(logging.WARNING)
 ##
 
 app = Flask(__name__)
-api = Api(app)
+blueprint = Blueprint('api', __name__, url_prefix='/api')
+api = Api(blueprint, doc='/', title='Switchboard API', version='1.0')
 bootstrap = Bootstrap(app)
 sensors = Sensors()
 with open(pars.sensors_fname, 'r') as stream:
@@ -113,20 +114,9 @@ with open(pars.sensors_fname, 'r') as stream:
 
     sensors.add_sensors(config_dict)
 
+app.config.SWAGGER_UI_DOC_EXPANSION = 'list'
+app.register_blueprint(blueprint)
 REGISTRY.register(sensors.CustomCollector(sensors))
-
-##
-## Prometheus API
-##
-
-
-class PrometheusMetrics(Resource):
-    def get(self):
-        return Response(
-            generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
-
-
-api.add_resource(PrometheusMetrics, '/metrics')
 
 ##
 ## Socket.IO
@@ -181,10 +171,18 @@ sensors.sio = sio
 ## REST API methods
 ##
 
-@api.route('/api/metrics/<string:node_id>')
+ns_metrics = api.namespace(
+    'metrics', description='methods for manipulating metrics', path='/metrics')
+ns_state = api.namespace('state')
+
+
+@ns_metrics.route('/<string:node_id>')
 class NodeMetrics(Resource):
+    @api.doc(params={'node_id': 'a node to be set'})
+    @api.response(200, 'Success')
+    @api.response(404, 'Node or sensor not found')
     def put(self, node_id):
-        '''set sensor metrics of a node'''
+        '''set sensors of a node'''
         logger.info("API: {}: {}".format(node_id, str(request.form.to_dict())))
         try:
             ret = sensors.set_values(node_id, request.form)
@@ -194,6 +192,9 @@ class NodeMetrics(Resource):
 
         return ret
 
+    @api.doc(params={'node_id': 'a node from which to get metrics'})
+    @api.response(200, 'Success')
+    @api.response(404, 'Node not found')
     def get(self, node_id):
         '''get sensor metrics of a node'''
 
@@ -205,10 +206,18 @@ class NodeMetrics(Resource):
 
         return ret
 
-@api.route('/api/metrics/<string:node_id>/<string:sensor_id>')
+
+@ns_metrics.route('/<string:node_id>/<string:sensor_id>')
 class SensorMetrics(Resource):
+    @api.doc(
+        params={
+            'node_id': 'a node where a sensor belongs',
+            'sensor_id': 'a sensor from which to get metrics'
+        })
+    @api.response(200, 'Success')
+    @api.response(404, 'Node or sensor not found')
     def get(self, node_id, sensor_id):
-        '''get metrics of a sensor'''
+        '''get metrics of one sensor'''
 
         try:
             ret = dict(sensors.get_metrics_of_sensor(node_id, sensor_id))
@@ -219,50 +228,51 @@ class SensorMetrics(Resource):
 
         return ret
 
-@api.route('/api/metrics')
+
+@ns_metrics.route('/')
 class SensorsMetricsList(Resource):
     def get(self):
-        '''get list of all metrics'''
+        '''get a list of all metrics'''
 
         return list(sensors.get_metrics(skip_None=False))
 
 
-@api.route('/api/metrics/by_gw')
+@ns_metrics.route('/by_gw')
 class SensorsMetricsByGw(Resource):
     def get(self):
-        '''get all metrics sorted by gateway - node - sensor'''
+        '''get all metrics sorted by gateway / node_id / sensor_id'''
 
         return sensors.get_metrics_dict_by_gw(skip_None=False)
 
 
-@api.route('/api/metrics/by_node')
+@ns_metrics.route('/by_node')
 class SensorsMetricsByNode(Resource):
     def get(self):
-        '''get all metrics sorted by node - sensor'''
+        '''get all metrics sorted by node_id / sensor_id'''
 
         return sensors.get_metrics_dict_by_node(skip_None=False)
 
 
-@api.route('/api/metrics/by_sensor')
+@ns_metrics.route('/by_sensor')
 class SensorsMetricsBySensor(Resource):
     def get(self):
-        '''get all metrics sorted by sensor'''
+        '''get all metrics sorted by sensor_id'''
 
         return sensors.get_metrics_dict_by_sensor(skip_None=False)
 
 
-@api.route('/api/dump')
+@ns_state.route('/dump')
 class SensorsDumpByGw(Resource):
     def get(self):
-        '''get all data of all sensors sorted by gateway - node - sensor'''
+        '''get a list of all data of all sensors'''
 
         return sensors.get_sensors_dump_dict()
 
 
-@api.route('/api/dump/by_gw')
+@ns_state.route('/dump/by_gw')
 class SensorsDumpList(Resource):
     def get(self):
-        '''get list of all data of all sensors'''
+        '''get all data of all sensors sorted by gateway / node_id / sensor_id'''
 
         return list(sensors.get_sensors_dump())
 
@@ -273,7 +283,7 @@ class SensorsDumpList(Resource):
 
 
 @app.route('/')
-@app.route('/table')
+@app.route('/metrics')
 def table():
     return render_template(
         'index.html',
@@ -287,6 +297,21 @@ def log():
         'log.html',
         async_mode=sio.async_mode,
         data=sensors.get_sensors_dump_dict())
+
+
+@app.route('/doc')
+def doc():
+    return render_template('doc.html', async_mode=sio.async_mode)
+
+
+##
+## Prometheus metrics
+##
+
+
+@app.route('/metrics')
+def metrics():
+    return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
 
 
 ##
