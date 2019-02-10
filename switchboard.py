@@ -283,7 +283,7 @@ class SensorsDumpList(Resource):
 
 
 @app.route('/')
-@app.route('/metrics')
+@app.route('/sensors')
 def table():
     return render_template(
         'index.html',
