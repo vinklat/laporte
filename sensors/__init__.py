@@ -3,6 +3,8 @@ from sensors.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 from copy import copy
 import json
+import yaml
+import jinja2
 import logging
 
 # create logger
@@ -15,11 +17,14 @@ SETUP = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
 class Sensors():
     '''container to store sensors'''
 
-    def __init__(self):
+    def reset(self):
         self.node_id_index = {}
         self.node_template_index = {}
         self.sensor_template_index = {}
         self.sensor_index = []
+
+    def __init__(self):
+        self.reset()
         self.sio = None
 
     def __add_sensor(self,
@@ -116,7 +121,8 @@ class Sensors():
     def add_sensors(self, config_dict):
         for gw, gw_config_dict in config_dict.items():
             self.__add_gw(gw, gw_config_dict)
-        self.prev_data = self.get_metrics_dict_by_node(skip_None=False)
+        #self.prev_data = self.get_metrics_dict_by_node(skip_None=False)
+        self.prev_data={}
 
     def __get_sensor(self, node_id, sensor_id):
         return self.node_id_index[node_id][sensor_id]
@@ -165,10 +171,6 @@ class Sensors():
             if not node_id in ret[sensor_id]:
                 ret[sensor_id][node_id] = data
         return ret
-
-    def get_sensors_dump(self):
-        for sensor in self.sensor_index:
-            yield dict(sensor.get_data())
 
     def get_sensors_dump_dict(self):
         ret = {}
@@ -398,3 +400,43 @@ class Sensors():
 
             for q in d:
                 yield d[q]
+
+    def default_values(self):
+        for sensor in self.sensor_index:
+            sensor.reset()
+
+        changes = self.__get_changed_nodes_dict()
+        self.emit_changes(changes)
+
+        return changes
+
+    def reset_values(self):
+        for sensor in self.sensor_index:
+            sensor.__init__()
+
+        changes = self.__get_changed_nodes_dict()
+        self.emit_changes(changes)
+
+        return changes
+
+    def load_config(self, pars):
+        try:
+            with open(pars.sensors_fname, 'r') as stream:
+                if pars.jinja2:
+                    t = jinja2.Template(stream.read())
+                    config_dict = yaml.load(t.render())
+                else:
+                    config_dict = yaml.load(stream)
+        except (yaml.YAMLError, jinja2.exceptions.TemplateSyntaxError,
+                FileNotFoundError) as exc:
+            logging.error("Cant't read config: {}".format(exc))
+            exit(1)
+
+        self.add_sensors(config_dict)
+        changes = self.__get_changed_nodes_dict()
+        return changes
+
+    def reload_config(self, pars):
+        self.default_values()
+        self.reset()
+        return self.load_config(pars)

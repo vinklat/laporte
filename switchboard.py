@@ -12,8 +12,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-import jinja2
-import yaml
 import json
 import logging
 from sensors import Sensors
@@ -101,19 +99,7 @@ blueprint = Blueprint('api', __name__, url_prefix='/api')
 api = Api(blueprint, doc='/', title='Switchboard API', version='1.0')
 bootstrap = Bootstrap(app)
 sensors = Sensors()
-with open(pars.sensors_fname, 'r') as stream:
-    try:
-        if pars.jinja2:
-            t = jinja2.Template(stream.read())
-            config_dict = yaml.load(t.render())
-        else:
-            config_dict = yaml.load(stream)
-    except (yaml.YAMLError, jinja2.exceptions.TemplateSyntaxError) as exc:
-        logger.error(exc)
-        exit(1)
-
-    sensors.add_sensors(config_dict)
-
+sensors.load_config(pars)
 app.config.SWAGGER_UI_DOC_EXPANSION = 'list'
 app.register_blueprint(blueprint)
 REGISTRY.register(sensors.CustomCollector(sensors))
@@ -173,7 +159,10 @@ sensors.sio = sio
 
 ns_metrics = api.namespace(
     'metrics', description='methods for manipulating metrics', path='/metrics')
-ns_state = api.namespace('state')
+ns_state = api.namespace(
+    'state',
+    description='methods for manipulating process state',
+    path='/state')
 
 
 @ns_metrics.route('/<string:node_id>')
@@ -261,20 +250,36 @@ class SensorsMetricsBySensor(Resource):
         return sensors.get_metrics_dict_by_sensor(skip_None=False)
 
 
+@ns_state.route('/default')
+class StateDefault(Resource):
+    def put(self):
+        '''reset metrics of all sensors to default values'''
+
+        return sensors.default_values()
+
+
+@ns_state.route('/reset')
+class StateReset(Resource):
+    def put(self):
+        '''reset states of all sensors'''
+
+        return sensors.reset_values()
+
+
+@ns_state.route('/reload')
+class StateReload(Resource):
+    def put(self):
+        '''reload switchboard configuration'''
+
+        return sensors.reload_config(pars)
+
+
 @ns_state.route('/dump')
-class SensorsDumpByGw(Resource):
+class StateDump(Resource):
     def get(self):
-        '''get a list of all data of all sensors'''
+        '''get all data of all sensors'''
 
         return sensors.get_sensors_dump_dict()
-
-
-@ns_state.route('/dump/by_gw')
-class SensorsDumpList(Resource):
-    def get(self):
-        '''get all data of all sensors sorted by gateway / node_id / sensor_id'''
-
-        return list(sensors.get_sensors_dump())
 
 
 ##
