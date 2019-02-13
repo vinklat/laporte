@@ -121,8 +121,7 @@ class Sensors():
     def add_sensors(self, config_dict):
         for gw, gw_config_dict in config_dict.items():
             self.__add_gw(gw, gw_config_dict)
-        #self.prev_data = self.get_metrics_dict_by_node(skip_None=False)
-        self.prev_data={}
+        self.prev_data = {}
 
     def __get_sensor(self, node_id, sensor_id):
         return self.node_id_index[node_id][sensor_id]
@@ -439,4 +438,7 @@ class Sensors():
     def reload_config(self, pars):
         self.default_values()
         self.reset()
-        return self.load_config(pars)
+        changes = self.load_config(pars)
+        self.emit_changes(changes)
+        self.sio.emit('reload', broadcast=True, namespace='/sensors')
+        return changes
