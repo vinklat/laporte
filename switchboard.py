@@ -250,18 +250,18 @@ class SensorsMetricsBySensor(Resource):
         return sensors.get_metrics_dict_by_sensor(skip_None=False)
 
 
-@ns_state.route('/default')
+@ns_metrics.route('/default')
 class StateDefault(Resource):
     def put(self):
-        '''reset metrics of all sensors to default values'''
+        '''reset state of all sensors to default value (reset metric "value")'''
 
         return sensors.default_values()
 
 
-@ns_state.route('/reset')
+@ns_metrics.route('/reset')
 class StateReset(Resource):
     def put(self):
-        '''reset states of all sensors'''
+        '''reset state and metadata of all sensors (reset metrics "value", "hits_total", "hit_timestamp", "duration_seconds")'''
 
         return sensors.reset_values()
 
