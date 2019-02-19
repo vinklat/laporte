@@ -18,9 +18,12 @@
         {% for sensor_id, sensor_data in sensors.items() %}
             <tr>
                 <td scope="row"><div>{{sensor_id}}</div></td>
-                <td><div id="{{node_id}}_{{sensor_id}}_value"></div></td>
-                <td><div id="{{node_id}}_{{sensor_id}}_hits_total"></div></td>
-                <td><div id="{{node_id}}_{{sensor_id}}_duration_seconds"></div></td>
+                {% set value_id = node_id + '_' + sensor_id + '_value' %}
+                {% set hits_id = node_id + '_' + sensor_id + '_hits_total' %}
+                {% set duration_id = node_id + '_' + sensor_id + '_duration_seconds' %}
+                <td><div id="{{ value_id | replace ('.','-') }}"></div></td>
+                <td><div id="{{ hits_id | replace ('.','-') }}"></div></td>
+                <td><div id="{{ duration_id | replace ('.','-') }}"></div></td>
             </tr>
         {% endfor %}
       {% endfor %}
@@ -55,7 +58,7 @@
             for (node_id in obj) {
                 for (sensor_id in obj[node_id]) {
                     for (metric in obj[node_id][sensor_id]) {
-                        id = "#" + node_id + "_" + sensor_id + "_" + metric;
+                        id = ("#" + node_id + "_" + sensor_id + "_" + metric).replace(/\./g,"-");
                         value = obj[node_id][sensor_id][metric];
                         switch (typeof value) {
                             case "number":
