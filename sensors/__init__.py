@@ -314,7 +314,7 @@ class Sensors():
                                 room=sensor.gw,
                                 namespace='/sensors')
 
-    def set_values(self, node_id, sensor_values_dict):
+    def set_values(self, node_id, sensor_values_dict, increment=False):
         changed = 0
 
         for sensor_id in sensor_values_dict:
@@ -331,7 +331,7 @@ class Sensors():
                     self.sensor_index.append(sensor)
 
             sensor = self.__get_sensor(node_id, sensor_id)
-            if sensor.set(sensor_values_dict[sensor_id]):
+            if sensor.set(sensor_values_dict[sensor_id], increment=increment):
                 changed = 1
 
                 if sensor.eval_expr is not None:

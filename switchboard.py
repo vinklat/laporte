@@ -167,12 +167,12 @@ ns_state = api.namespace(
 
 @ns_metrics.route('/<string:node_id>')
 class NodeMetrics(Resource):
-    @api.doc(params={'node_id': 'a node to be set'})
+    @api.doc(params={'node_id': 'a node to be affected'})
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     def put(self, node_id):
         '''set sensors of a node'''
-        logger.info("API: {}: {}".format(node_id, str(request.form.to_dict())))
+        logger.info("API/set: {}: {}".format(node_id, str(request.form.to_dict())))
         try:
             ret = sensors.set_values(node_id, request.form)
         except KeyError:
@@ -191,6 +191,23 @@ class NodeMetrics(Resource):
             ret = dict(sensors.get_metrics_of_node(node_id))
         except KeyError:
             logger.warning("node {} not found".format(node_id))
+            abort(404)  #not configured
+
+        return ret
+
+
+@ns_metrics.route('/inc/<string:node_id>')
+class NodeMetrics(Resource):
+    @api.doc(params={'node_id': 'a node to be affected'})
+    @api.response(200, 'Success')
+    @api.response(404, 'Node or sensor not found')
+    def put(self, node_id):
+        '''increment sensor values of a node'''
+        logger.info("API/inc: {}: {}".format(node_id, str(request.form.to_dict())))
+        try:
+            ret = sensors.set_values(node_id, request.form, increment=True)
+        except KeyError:
+            logger.warning("node {} or sensor not found".format(node_id))
             abort(404)  #not configured
 
         return ret

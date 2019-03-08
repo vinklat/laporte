@@ -110,8 +110,12 @@ class Sensor(ABC):
             self.duration_seconds = timestamp - self.hit_timestamp
         self.hit_timestamp = timestamp
 
-    def set(self, value, update=True):
+    def set(self, value, update=True, increment=False):
         value = self.fix_value(value)
+
+        if (increment and self.value is not None):
+            value += self.value
+
         if (value == self.value and not self.accept_refresh) or self.hold:
             return 0
 
@@ -133,12 +137,6 @@ class Sensor(ABC):
                 self.dataset_ready = True
 
         return 1
-
-    def inc(self, value, update=True):
-        if self.value is None:
-            return self.set(value, update=update)
-        else:
-            return self.set(self.value + value, update=update)
 
     def do_eval(self, vars_dict={}, preserve_override=False, update=True):
 
