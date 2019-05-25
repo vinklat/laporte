@@ -54,6 +54,14 @@ parser.add_argument(
     action='store_true',
     dest='jinja2',
     help='use jinja2 in sensor config yaml file')
+parser.add_argument(
+    '-t',
+    '--time-locale',
+    action='store',
+    dest='time_locale',
+    help='time formatting locale (en-US, cs-CZ , ...)',
+    type=str,
+    default="en-US")
 
 LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 
@@ -172,7 +180,8 @@ class NodeMetrics(Resource):
     @api.response(404, 'Node or sensor not found')
     def put(self, node_id):
         '''set sensors of a node'''
-        logger.info("API/set: {}: {}".format(node_id, str(request.form.to_dict())))
+        logger.info("API/set: {}: {}".format(node_id,
+                                             str(request.form.to_dict())))
         try:
             ret = sensors.set_values(node_id, request.form)
         except KeyError:
@@ -197,13 +206,14 @@ class NodeMetrics(Resource):
 
 
 @ns_metrics.route('/inc/<string:node_id>')
-class NodeMetrics(Resource):
+class IncNodeMetrics(Resource):
     @api.doc(params={'node_id': 'a node to be affected'})
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     def put(self, node_id):
         '''increment sensor values of a node'''
-        logger.info("API/inc: {}: {}".format(node_id, str(request.form.to_dict())))
+        logger.info("API/inc: {}: {}".format(node_id,
+                                             str(request.form.to_dict())))
         try:
             ret = sensors.set_values(node_id, request.form, increment=True)
         except KeyError:
@@ -309,6 +319,7 @@ class StateDump(Resource):
 def table():
     return render_template(
         'index.html',
+        time_locale=pars.time_locale,
         async_mode=sio.async_mode,
         data=sensors.get_sensors_dump_dict())
 

@@ -20,9 +20,10 @@
                 <td scope="row"><div>{{sensor_id}}</div></td>
                 {% set value_id = node_id + '_' + sensor_id + '_value' %}
                 {% set hits_id = node_id + '_' + sensor_id + '_hits_total' %}
+                {% set timestamp_id = node_id + '_' + sensor_id + '_hit_timestamp' %}
                 {% set duration_id = node_id + '_' + sensor_id + '_duration_seconds' %}
                 <td><div id="{{ value_id | replace ('.','-') }}"></div></td>
-                <td><div id="{{ hits_id | replace ('.','-') }}"></div></td>
+                <td><span id="{{ hits_id | replace ('.','-') }}"></span> <small class="text-secondary" id="{{ timestamp_id | replace ('.','-') }}"></small></td>
                 <td><div id="{{ duration_id | replace ('.','-') }}"></div></td>
             </tr>
         {% endfor %}
@@ -69,6 +70,23 @@
                                     } else {
                                         $(id).html(value.toString() + "s");
                                     }
+                                } else if (metric == "hits_total") {
+                                    if (value == 0) {
+                                        $(id).html("");
+                                    } else {
+                                        $(id).html(value.toString() + "x");
+                                    }
+                                } else if (metric == "hit_timestamp") {
+                                    var t = new Date(value*1000);
+                                    var tnow = new Date();
+                                    var tnowstart = tnow - (60*60*1000*tnow.getHours()) - (60*1000*tnow.getMinutes()) - (1000*tnow.getSeconds())
+                                    var s;
+                                    if (t > tnowstart) {
+                                        s = t.toLocaleTimeString({% if time_locale is defined %}'{{ time_locale }}'{% endif %});
+                                    } else {
+                                        s = t.toLocaleString({% if time_locale is defined %}'{{ time_locale }}'{% endif %});
+                                    }
+                                    $(id).html("(last " + s + ")");
                                 } else {
                                     value = Math.round(value*100)/100;
                                     $(id).html(value.toString());
