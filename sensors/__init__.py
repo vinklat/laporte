@@ -425,7 +425,7 @@ class Sensors():
                     t = jinja2.Template(stream.read())
                     config_dict = yaml.load(t.render())
                 else:
-                    config_dict = yaml.load(stream)
+                    config_dict = yaml.safe_load(stream)
         except (yaml.YAMLError, jinja2.exceptions.TemplateSyntaxError,
                 FileNotFoundError) as exc:
             logging.error("Cant't read config: {}".format(exc))
