@@ -400,6 +400,22 @@ class Sensors():
             for q in d:
                 yield d[q]
 
+    def get_parser_arguments(self):
+
+        d = {}
+        for sensor in self.sensor_index:
+            t = sensor.get_type()
+
+            if t == GAUGE or t == COUNTER:
+                d[sensor.sensor_id] = (float, 'decimal')
+            elif t == SWITCH:
+                d[sensor.sensor_id] = (bool, 'boolean')
+            else:
+                d[sensor.sensor_id] = (str, 'string')
+
+        for q in d:
+            yield q, d[q][0], d[q][1]
+
     def default_values(self):
         for sensor in self.sensor_index:
             sensor.reset()

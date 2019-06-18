@@ -172,12 +172,22 @@ ns_state = api.namespace(
     description='methods for manipulating process state',
     path='/state')
 
+parser = api.parser()
+for sensor_id, t, t_str in sensors.get_parser_arguments():
+    parser.add_argument(
+        sensor_id,
+        type = t,
+        required = False,
+        help = '{} value for sensor {}'.format(t_str, sensor_id),
+        location = 'form')
+
 
 @ns_metrics.route('/<string:node_id>')
 class NodeMetrics(Resource):
     @api.doc(params={'node_id': 'a node to be affected'})
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
+    @api.expect(parser)
     def put(self, node_id):
         '''set sensors of a node'''
         logger.info("API/set: {}: {}".format(node_id,
@@ -210,6 +220,7 @@ class IncNodeMetrics(Resource):
     @api.doc(params={'node_id': 'a node to be affected'})
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
+    @api.expect(parser)
     def put(self, node_id):
         '''increment sensor values of a node'''
         logger.info("API/inc: {}: {}".format(node_id,
