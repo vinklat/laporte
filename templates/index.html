@@ -1,43 +1,55 @@
 {% extends 'base.html' %}
-
-{% block title %}Switchboard{% endblock %}
+{% block title %}sensors{% endblock %}
 
 {% block content %}
   <table class="table">
-  {% for gw, nodes in data.items() %}
-      {% for node_id, sensors in nodes.items() %}
+  {% set ttl_dict = {} -%}
+  {% for gw, nodes in data.items() -%}
+        {% for node_id, sensors in nodes.items() -%}
         <thead>
             <tr class="bg-light">
-                <th scope="col">{{node_id}} <small>[{{gw}}]</small></th>
-                <th scope="col">value</th>
-                <th scope="col">hits</th>
-                <th scope="col">duration</th>
+                <th style="width: 40%" scope="col">{{node_id}} <small>[{{gw}}]</small></th>
+                <th style="width: 20%" scope="col">value</th>
+                <th style="width: 20%" scope="col">hits</th>
+                <th style="width: 20%" scope="col">duration</th>
             </tr>
         </thead>
         <tbody>
-        {% for sensor_id, sensor_data in sensors.items() %}
-            <tr>
-                <td scope="row"><div>{{sensor_id}}</div></td>
-                {% set value_id = node_id + '_' + sensor_id + '_value' %}
-                {% set hits_id = node_id + '_' + sensor_id + '_hits_total' %}
-                {% set timestamp_id = node_id + '_' + sensor_id + '_hit_timestamp' %}
-                {% set duration_id = node_id + '_' + sensor_id + '_duration_seconds' %}
-                <td><div id="{{ value_id | replace ('.','-') }}"></div></td>
-                <td><span id="{{ hits_id | replace ('.','-') }}"></span> <small class="text-secondary" id="{{ timestamp_id | replace ('.','-') }}"></small></td>
-                <td><div id="{{ duration_id | replace ('.','-') }}"></div></td>
-            </tr>
-        {% endfor %}
-      {% endfor %}
+        {% for sensor_id, sensor_data in sensors.items() -%}
+        <tr>
+            <td scope="row"><div>{{sensor_id}}</div></td>
+            {% set sensor_label = (node_id + '_' + sensor_id) | replace ('.','-') -%}
+            {% set value_id = sensor_label + '_value' -%}
+            {% set ttl_id = sensor_label + '_ttl' -%}
+            {% set hits_id = sensor_label + '_hits_total' -%}
+            {% set timestamp_id = sensor_label + '_hit_timestamp' -%}
+            {% set duration_id = sensor_label + '_duration_seconds' -%}
+            {% if sensor_data.ttl is number -%}
+                {% do ttl_dict.update({ sensor_label : sensor_data.ttl }) -%}
+            {% endif -%}
+            <td><span id="{{ value_id }}"></span> <small class="text-secondary" id="{{ ttl_id }}"></small></td>
+            <td><span id="{{ hits_id }}"></span> <small class="text-secondary" id="{{ timestamp_id }}"></small></td>
+            <td><span id="{{ duration_id }}"></span></td>
+        </tr>
+        {% endfor -%}
+      {% endfor -%}
         </tbody>
-  {% endfor %}
+  {% endfor -%}
   </table>
+
+<script type="text/javascript" charset="utf-8">
+    var ttl_dict = {{ ttl_dict | safe }};
+    var countdown_dict = {};
+</script>
+
 {% endblock %}
+
 
 {% block script %}
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
 <script type="text/javascript" charset="utf-8">
     $(document).ready(function() {
-        namespace = '/events';
+        var namespace = '/events';
         // Connect to the Socket.IO server.
         // The connection URL has the following format:
         //     http[s]://<domain>:<port>[/<namespace>]
@@ -59,8 +71,10 @@
             for (node_id in obj) {
                 for (sensor_id in obj[node_id]) {
                     for (metric in obj[node_id][sensor_id]) {
-                        id = ("#" + node_id + "_" + sensor_id + "_" + metric).replace(/\./g,"-");
-                        value = obj[node_id][sensor_id][metric];
+                        var sensor_label = (node_id + "_" + sensor_id).replace(/\./g,"-");
+                        var metric_label = sensor_label + "_" + metric;
+                        var id = "#" + metric_label;
+                        var value = obj[node_id][sensor_id][metric];
                         switch (typeof value) {
                             case "number":
                                 if (metric == "duration_seconds") {
@@ -74,7 +88,7 @@
                                     if (value == 0) {
                                         $(id).html("");
                                     } else {
-                                        $(id).html(value.toString() + "x");
+                                        $(id).html(value.toString() + "&#xd7;");
                                     }
                                 } else if (metric == "hit_timestamp") {
                                     var t = new Date(value*1000);
@@ -87,6 +101,9 @@
                                         s = t.toLocaleString({% if time_locale is defined %}'{{ time_locale }}'{% endif %});
                                     }
                                     $(id).html("(last " + s + ")");
+                                    if (sensor_label in ttl_dict) {
+                                        countdown_dict[sensor_label]=ttl_dict[sensor_label]
+                                    }
                                 } else {
                                     value = Math.round(value*100)/100;
                                     $(id).html(value.toString());
@@ -108,5 +125,21 @@
             }
         });
     });
+
+    function fmtMSS(s){return(s-(s%=60))/60+(9<s?':':':0')+s}
+
+    var timer = setInterval(function() {
+        for (x in countdown_dict) {
+            i = countdown_dict[x];
+            if (i) { 
+                $("#" + x + "_ttl").html("(exp " + fmtMSS(i) + ")");
+                countdown_dict[x] -= 1;
+            } else {
+                $("#" + x + "_ttl").html("");
+                delete countdown_dict[x];
+            }
+        } 
+    }, 1000);
+
 </script>
 {% endblock %}

@@ -1,10 +1,11 @@
-{% from 'bootstrap/nav.html' import render_nav_item %}
+{% from 'bootstrap/nav.html' import render_nav_item -%}
+{% set appname = 'Switchboard' -%}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>{% block title %}{% endblock %}</title>
+    <title>{{ appname }} - {% block title %}{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
     {{ bootstrap.load_css() }}
 </head>
@@ -16,7 +17,7 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav mr-auto">
-                <a class="navbar-brand mb-0 h1" href="#">Switchboard</a>
+                <a class="navbar-brand mb-0 h1" href="#">{{ appname }}</a>
                 {{ render_nav_item('table', 'Sensors', use_li=True) }}
                 {{ render_nav_item('log', 'Log', use_li=True) }}
                 {{ render_nav_item('doc', 'Documentation', use_li=True) }}
