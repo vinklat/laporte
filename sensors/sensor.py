@@ -73,7 +73,8 @@ class Sensor(ABC):
     hold = None
 
     def get_data(self, skip_None=False, selected={}):
-        for key, value in self.__dict__.items():
+        z = {**self.__dict__, **{"type": self.get_type()}}
+        for key, value in z.items():
             if (not selected) or (key in selected):
                 if not (value is None and skip_None):
                     yield key, value
