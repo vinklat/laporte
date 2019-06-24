@@ -160,10 +160,11 @@ class Sensor(ABC):
                         'value', 'prev_value', 'hits_total', 'hit_timestamp',
                         'duration_seconds', 'ttl_remaining'
                     })),
-            re = re)
+            re=re)
 
-        aeval = Interpreter(
-            writer=Devnull(), err_writer=Devnull(), symtable=syms)
+        aeval = Interpreter(writer=Devnull(),
+                            err_writer=Devnull(),
+                            symtable=syms)
 
         try:
             x = aeval.eval(self.eval_expr)
@@ -172,11 +173,13 @@ class Sensor(ABC):
             return 0
 
         if not x is None:
-            logging.info("eval: {}".format({self.node_id: {self.sensor_id: x}}))
+            logging.info("eval: {}".format({self.node_id: {
+                self.sensor_id: x
+            }}))
             return self.set(x, update=update)
         else:
             logging.debug("can't eval {}.{}".format(self.node_id,
-                                                   self.sensor_id))
+                                                    self.sensor_id))
             if len(aeval.error) > 0:
                 logging.debug(aeval.error[0].get_error())
 

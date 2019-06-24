@@ -24,44 +24,39 @@ logger = logging.getLogger(__name__)
 ##
 
 parser = ArgumentParser(description='Switchboard')
-parser.add_argument(
-    '-a',
-    '--address',
-    action='store',
-    dest='addr',
-    help='listen address',
-    type=str,
-    default="")
-parser.add_argument(
-    '-p',
-    '--port',
-    action='store',
-    dest='port',
-    help='listen port',
-    type=int,
-    default=9128)
-parser.add_argument(
-    '-c',
-    '--sensor-config',
-    action='store',
-    dest='sensors_fname',
-    help='sensor config yaml file',
-    type=str,
-    default='conf/sensors.yml')
-parser.add_argument(
-    '-j',
-    '--jinja2',
-    action='store_true',
-    dest='jinja2',
-    help='use jinja2 in sensor config yaml file')
-parser.add_argument(
-    '-t',
-    '--time-locale',
-    action='store',
-    dest='time_locale',
-    help='time formatting locale (en-US, cs-CZ , ...)',
-    type=str,
-    default="en-US")
+parser.add_argument('-a',
+                    '--address',
+                    action='store',
+                    dest='addr',
+                    help='listen address',
+                    type=str,
+                    default="")
+parser.add_argument('-p',
+                    '--port',
+                    action='store',
+                    dest='port',
+                    help='listen port',
+                    type=int,
+                    default=9128)
+parser.add_argument('-c',
+                    '--sensor-config',
+                    action='store',
+                    dest='sensors_fname',
+                    help='sensor config yaml file',
+                    type=str,
+                    default='conf/sensors.yml')
+parser.add_argument('-j',
+                    '--jinja2',
+                    action='store_true',
+                    dest='jinja2',
+                    help='use jinja2 in sensor config yaml file')
+parser.add_argument('-t',
+                    '--time-locale',
+                    action='store',
+                    dest='time_locale',
+                    help='time formatting locale (en-US, cs-CZ , ...)',
+                    type=str,
+                    default="en-US")
 
 LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 
@@ -94,8 +89,8 @@ pars = parser.parse_args()
 ## set logger
 ##
 
-logging.basicConfig(
-    format='%(levelname)s %(module)s: %(message)s', level=pars.log_level)
+logging.basicConfig(format='%(levelname)s %(module)s: %(message)s',
+                    level=pars.log_level)
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
 ##
@@ -148,10 +143,9 @@ class SensorsNamespace(Namespace):
 
 class EventsNamespace(Namespace):
     def on_connect(self):
-        emit(
-            'event',
-            json.dumps(sensors.get_metrics_dict_by_node(skip_None=False)),
-            broadcast=True)
+        emit('event',
+             json.dumps(sensors.get_metrics_dict_by_node(skip_None=False)),
+             broadcast=True)
 
     def on_ping(self):
         emit('pong')
@@ -165,21 +159,20 @@ sensors.sio = sio
 ## REST API methods
 ##
 
-ns_metrics = api.namespace(
-    'metrics', description='methods for manipulating metrics', path='/metrics')
-ns_state = api.namespace(
-    'state',
-    description='methods for manipulating process state',
-    path='/state')
+ns_metrics = api.namespace('metrics',
+                           description='methods for manipulating metrics',
+                           path='/metrics')
+ns_state = api.namespace('state',
+                         description='methods for manipulating process state',
+                         path='/state')
 
 parser = api.parser()
 for sensor_id, t, t_str in sensors.get_parser_arguments():
-    parser.add_argument(
-        sensor_id,
-        type = t,
-        required = False,
-        help = '{} value for sensor {}'.format(t_str, sensor_id),
-        location = 'form')
+    parser.add_argument(sensor_id,
+                        type=t,
+                        required=False,
+                        help='{} value for sensor {}'.format(t_str, sensor_id),
+                        location='form')
 
 
 @ns_metrics.route('/<string:node_id>')
@@ -328,19 +321,17 @@ class StateDump(Resource):
 @app.route('/')
 @app.route('/sensors')
 def table():
-    return render_template(
-        'index.html',
-        time_locale=pars.time_locale,
-        async_mode=sio.async_mode,
-        data=sensors.get_sensors_dump_dict())
+    return render_template('index.html',
+                           time_locale=pars.time_locale,
+                           async_mode=sio.async_mode,
+                           data=sensors.get_sensors_dump_dict())
 
 
 @app.route('/log')
 def log():
-    return render_template(
-        'log.html',
-        async_mode=sio.async_mode,
-        data=sensors.get_sensors_dump_dict())
+    return render_template('log.html',
+                           async_mode=sio.async_mode,
+                           data=sensors.get_sensors_dump_dict())
 
 
 @app.route('/doc')
@@ -364,12 +355,11 @@ def metrics():
 
 scheduler = BackgroundScheduler()
 scheduler.start()
-scheduler.add_job(
-    func=sensors.update_sensors_ttl,
-    trigger=IntervalTrigger(seconds=1),
-    id='ttl_job',
-    name='update ttl counters every second',
-    replace_existing=True)
+scheduler.add_job(func=sensors.update_sensors_ttl,
+                  trigger=IntervalTrigger(seconds=1),
+                  id='ttl_job',
+                  name='update ttl counters every second',
+                  replace_existing=True)
 
 ##
 ## start http server

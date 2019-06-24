@@ -90,26 +90,24 @@ class Sensors():
         if 'sensors' in node_config_dict:
             for sensor_id, sensor_config_dict in node_config_dict[
                     'sensors'].items():
-                self.__add_sensor(
-                    gw,
-                    node_id,
-                    node_addr,
-                    sensor_id,
-                    sensor_config_dict,
-                    template=template,
-                    mode=SENSOR)
+                self.__add_sensor(gw,
+                                  node_id,
+                                  node_addr,
+                                  sensor_id,
+                                  sensor_config_dict,
+                                  template=template,
+                                  mode=SENSOR)
 
         if 'actuators' in node_config_dict:
             for sensor_id, sensor_config_dict in node_config_dict[
                     'actuators'].items():
-                self.__add_sensor(
-                    gw,
-                    node_id,
-                    node_addr,
-                    sensor_id,
-                    sensor_config_dict,
-                    template=template,
-                    mode=ACTUATOR)
+                self.__add_sensor(gw,
+                                  node_id,
+                                  node_addr,
+                                  sensor_id,
+                                  sensor_config_dict,
+                                  template=template,
+                                  mode=ACTUATOR)
 
     def __add_gw(self, gw, gw_config_dict):
         for node_id, node_config_dict in gw_config_dict.items():
@@ -286,17 +284,12 @@ class Sensors():
 
         if diff and self.sio is not None:
             for node_id in diff:
-                logging.info('complete sensor changes: {}'.format({
-                    node_id:
-                    diff[node_id]
-                }))
-                self.sio.emit(
-                    'event',
-                    json.dumps({
-                        node_id: diff[node_id]
-                    }),
-                    broadcast=True,
-                    namespace='/events')
+                logging.info('complete sensor changes: {}'.format(
+                    {node_id: diff[node_id]}))
+                self.sio.emit('event',
+                              json.dumps({node_id: diff[node_id]}),
+                              broadcast=True,
+                              namespace='/events')
                 for sensor_id, metrics in diff[node_id].items():
                     sensor = self.__get_sensor(node_id, sensor_id)
                     for metric in metrics:
@@ -304,15 +297,14 @@ class Sensors():
                             logging.debug(
                                 'emit actuator event: {}.{}: {}'.format(
                                     node_id, sensor_id, sensor.value))
-                            self.sio.emit(
-                                'actuator_response',
-                                json.dumps({
-                                    node_id: {
-                                        sensor_id: sensor.value
-                                    }
-                                }),
-                                room=sensor.gw,
-                                namespace='/sensors')
+                            self.sio.emit('actuator_response',
+                                          json.dumps({
+                                              node_id: {
+                                                  sensor_id: sensor.value
+                                              }
+                                          }),
+                                          room=sensor.gw,
+                                          namespace='/sensors')
 
     def set_values(self, node_id, sensor_values_dict, increment=False):
         changed = 0
@@ -336,10 +328,9 @@ class Sensors():
 
                 if sensor.eval_expr is not None:
                     vars_dict = self.__get_sensor_required_vars_dict(sensor)
-                    sensor.do_eval(
-                        vars_dict=vars_dict,
-                        update=False,
-                        preserve_override=True)
+                    sensor.do_eval(vars_dict=vars_dict,
+                                   update=False,
+                                   preserve_override=True)
 
                 self.__do_requiring_eval(sensor)
                 self.__used_dataset_reset()
@@ -386,11 +377,13 @@ class Sensors():
                     if not name in d:
                         metric_name = "{}_{}".format(EXPORTER_NAME, name)
                         if metric_type == COUNTER:
-                            x = CounterMetricFamily(
-                                metric_name, '', labels=labels)
+                            x = CounterMetricFamily(metric_name,
+                                                    '',
+                                                    labels=labels)
                         else:
-                            x = GaugeMetricFamily(
-                                metric_name, '', labels=labels)
+                            x = GaugeMetricFamily(metric_name,
+                                                  '',
+                                                  labels=labels)
                         d[name] = x
                     else:
                         x = d[name]
