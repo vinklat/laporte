@@ -3,9 +3,9 @@
 
 {% block content %}
   <table class="table">
-  {% set ttl_dict = {} -%}
+  {% set sensors = {} -%}
   {% for gw, nodes in data.items() -%}
-        {% for node_id, sensors in nodes.items() -%}
+        {% for node_id, node_data in nodes.items() -%}
         <thead>
             <tr class="bg-light">
                 <th style="width: 40%" scope="col">{{node_id}} <small>[{{gw}}]</small></th>
@@ -15,7 +15,7 @@
             </tr>
         </thead>
         <tbody>
-        {% for sensor_id, sensor_data in sensors.items() -%}
+        {% for sensor_id, sensor_data in node_data.items() -%}
         <tr>
             <td scope="row"><div>{{sensor_id}}</div></td>
             {% set sensor_label = (node_id + '_' + sensor_id) | replace ('.','-') -%}
@@ -24,9 +24,7 @@
             {% set hits_id = sensor_label + '_hits_total' -%}
             {% set timestamp_id = sensor_label + '_hit_timestamp' -%}
             {% set duration_id = sensor_label + '_duration_seconds' -%}
-            {% if sensor_data.ttl is number -%}
-                {% do ttl_dict.update({ sensor_label : sensor_data.ttl }) -%}
-            {% endif -%}
+            {% do sensors.update({ sensor_label : { "ttl" : sensor_data["ttl"], "type" : sensor_data["type"], "default_value" : sensor_data["default_value"] }}) -%}
             <td><span id="{{ value_id }}"></span> <small class="text-secondary" id="{{ ttl_id }}"></small></td>
             <td><span id="{{ hits_id }}"></span> <small class="text-secondary" id="{{ timestamp_id }}"></small></td>
             <td><span id="{{ duration_id }}"></span></td>
@@ -38,8 +36,7 @@
   </table>
 
 <script type="text/javascript" charset="utf-8">
-    var ttl_dict = {{ ttl_dict | safe }};
-    var countdown_dict = {};
+    var sensors = {{ sensors | safe | replace ('None','null') | replace ('True','true') | replace ('False','false')}};
 </script>
 
 {% endblock %}
@@ -70,15 +67,18 @@
 
             for (node_id in obj) {
                 for (sensor_id in obj[node_id]) {
+                    var sensor_label = (node_id + "_" + sensor_id).replace(/\./g,"-");
+                    var sensor_type = sensors[sensor_label].type;
+                    var default_value = sensors[sensor_label].default_value;
+                    var ttl = sensors[sensor_label].ttl;
                     for (metric in obj[node_id][sensor_id]) {
-                        var sensor_label = (node_id + "_" + sensor_id).replace(/\./g,"-");
                         var metric_label = sensor_label + "_" + metric;
                         var id = "#" + metric_label;
                         var value = obj[node_id][sensor_id][metric];
                         switch (typeof value) {
                             case "number":
                                 if (metric == "duration_seconds") {
-                                    value = Math.round(value*10)/10;
+                                    value = Math.round(value * 10) / 10;
                                     if (value == 0) {
                                         $(id).html("");
                                     } else {
@@ -91,9 +91,9 @@
                                         $(id).html(value.toString() + "&#xd7;");
                                     }
                                 } else if (metric == "hit_timestamp") {
-                                    var t = new Date(value*1000);
+                                    var t = new Date(value * 1000);
                                     var tnow = new Date();
-                                    var tnowstart = tnow - (60*60*1000*tnow.getHours()) - (60*1000*tnow.getMinutes()) - (1000*tnow.getSeconds())
+                                    var tnowstart = tnow - (60 * 60 * 1000 * tnow.getHours()) - (60 * 1000 * tnow.getMinutes()) - (1000 * tnow.getSeconds())
                                     var s;
                                     if (t > tnowstart) {
                                         s = t.toLocaleTimeString({% if time_locale is defined %}'{{ time_locale }}'{% endif %});
@@ -101,11 +101,11 @@
                                         s = t.toLocaleString({% if time_locale is defined %}'{{ time_locale }}'{% endif %});
                                     }
                                     $(id).html("(last " + s + ")");
-                                    if (sensor_label in ttl_dict) {
-                                        countdown_dict[sensor_label]=ttl_dict[sensor_label]
+                                    if ((typeof ttl == 'number') && ((sensor_type != 3) || (document.getElementById(sensor_label + "_value").innerHTML != default_value.toString()))) {
+                                        sensors[sensor_label].ttl_remaining = Math.round(ttl - ((tnow - t)/1000));
                                     }
                                 } else {
-                                    value = Math.round(value*100)/100;
+                                    value = Math.round(value * 100) / 100;
                                     $(id).html(value.toString());
                                 }
                                 break;
@@ -126,19 +126,20 @@
         });
     });
 
-    function fmtMSS(s){return(s-(s%=60))/60+(9<s?':':':0')+s}
+    function fmtMSS(s) {
+        return (s - (s %= 60)) / 60 + (9 < s ? ':' : ':0') + s
+    }
 
     var timer = setInterval(function() {
-        for (x in countdown_dict) {
-            i = countdown_dict[x];
-            if (i) { 
-                $("#" + x + "_ttl").html("(exp " + fmtMSS(i) + ")");
-                countdown_dict[x] -= 1;
+        for (x in sensors) {
+            if (sensors[x].ttl_remaining) {
+                $("#" + x + "_ttl").html("(exp " + fmtMSS(sensors[x].ttl_remaining) + ")");
+                sensors[x].ttl_remaining -= 1;
             } else {
                 $("#" + x + "_ttl").html("");
-                delete countdown_dict[x];
+                sensors[x].ttl_remaining = null;
             }
-        } 
+        }
     }, 1000);
 
 </script>
