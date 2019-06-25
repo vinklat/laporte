@@ -103,7 +103,10 @@
                                     $(id).html("(last " + s + ")");
                                     if ((typeof ttl == 'number') && ((sensor_type != 3) || (document.getElementById(sensor_label + "_value").innerHTML != default_value.toString()))) {
                                         sensors[sensor_label].ttl_remaining = Math.round(ttl - ((tnow - t)/1000));
+                                    } else {
+                                        sensors[sensor_label].ttl_remaining = null;
                                     }
+                                
                                 } else {
                                     value = Math.round(value * 100) / 100;
                                     $(id).html(value.toString());
@@ -137,7 +140,6 @@
                 sensors[x].ttl_remaining -= 1;
             } else {
                 $("#" + x + "_ttl").html("");
-                sensors[x].ttl_remaining = null;
             }
         }
     }, 1000);
