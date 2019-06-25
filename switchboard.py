@@ -330,6 +330,7 @@ def table():
 @app.route('/log')
 def log():
     return render_template('log.html',
+                           time_locale=pars.time_locale,
                            async_mode=sio.async_mode,
                            data=sensors.get_sensors_dump_dict())
 

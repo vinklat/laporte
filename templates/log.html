@@ -3,14 +3,25 @@
 {% block title %}event log{% endblock %}
 
 {% block content %}
-  <h2>Event log:</h2>
-  <div id="log" class="text-monospace"></div>  
+<table class="table">
+    <thead>
+        <tr class="bg-light">
+            <th scope="col">id</th>
+            <th style="col">time</th>
+            <th scope="col">message</th>
+        </tr>
+    </thead>
+    <tbody id="log">
+    </tbody>
+</table>
 {% endblock %}
 
 {% block script %}
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
 <script type="text/javascript" charset="utf-8">
-    $(document).ready(function() {
+    var msg_id = 0;
+
+     $(document).ready(function() {
         namespace = '/events';
         // Connect to the Socket.IO server.
         // The connection URL has the following format:
@@ -28,8 +39,12 @@
 
         // Event handler for server sent event data.
         socket.on('event', function(msg) {
-            t=new Date().toLocaleString();
-            $('#log').append('<br>' + $('<div/>').text(t + " " + msg).html());
+            if (msg_id >0) {
+                var t = new Date().toLocaleTimeString({% if time_locale is defined %}'{{ time_locale }}'{% endif %});
+                var row = '<tr><td>' + msg_id + "</td><td>" + t + '</td><td>' + msg + '</td></tr>';
+                $('#log').prepend(row);
+            }
+            msg_id += 1;
         });
     });
 </script>
