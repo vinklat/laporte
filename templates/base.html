@@ -20,16 +20,15 @@
                 <a class="navbar-brand mb-0 h1" href="#">{{ appname }}</a>
                 {{ render_nav_item('table', 'Sensors', use_li=True) }}
                 {{ render_nav_item('log', 'Log', use_li=True) }}
-                {{ render_nav_item('doc', 'Documentation', use_li=True) }}
+                {{ render_nav_item('prom', 'Metrics', use_li=True) }}
+                {{ render_nav_item('doc', 'API', use_li=True) }}
             </ul>
             <span class="navbar-text" id="status"></span>
         </div>
     </nav>
-<main class="container-fluid">
-  <div style="padding-top: 2rem">
+    <main class="container-fluid">
     {% block content %}{% endblock %}
-  </div>
-</main>
+    </main>
 
 {{ bootstrap.load_js() }}
 {% block script %}{% endblock %}

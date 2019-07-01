@@ -2,6 +2,7 @@
 {% block title %}sensors{% endblock %}
 
 {% block content %}
+  <div style="padding-top: 3rem">
   <table class="table">
   {% set sensors = {} -%}
   {% for gw, nodes in data.items() -%}
@@ -25,8 +26,8 @@
             {% set timestamp_id = sensor_label + '_hit_timestamp' -%}
             {% set duration_id = sensor_label + '_duration_seconds' -%}
             {% do sensors.update({ sensor_label : { "ttl" : sensor_data["ttl"], "type" : sensor_data["type"], "default_value" : sensor_data["default_value"] }}) -%}
-            <td><span id="{{ value_id }}"></span> <small class="text-secondary" id="{{ ttl_id }}"></small></td>
-            <td><span id="{{ hits_id }}"></span> <small class="text-secondary" id="{{ timestamp_id }}"></small></td>
+            <td><span id="{{ value_id }}"></span> <small class="text-secondary font-weight-light" id="{{ ttl_id }}"></small></td>
+            <td><span id="{{ hits_id }}"></span> <small class="text-secondary font-weight-light" id="{{ timestamp_id }}"></small></td>
             <td><span id="{{ duration_id }}"></span></td>
         </tr>
         {% endfor -%}
@@ -34,6 +35,7 @@
         </tbody>
   {% endfor -%}
   </table>
+  </div>
 
 <script type="text/javascript" charset="utf-8">
     var sensors = {{ sensors | safe | replace ('None','null') | replace ('True','true') | replace ('False','false')}};

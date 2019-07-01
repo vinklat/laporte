@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Prometheus metrics{% endblock %}
+
+{% block content %}
+<div style="padding-top: 3rem">
+<h3>Prometheus metrics</h3>
+<p class="font-weight-light" id="url"></p>
+<div id="metrics" class="text-monospace"></div>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+<script type="text/javascript" charset="utf-8">
+    $(document).ready(function() {
+        const namespace = '/events';
+        // Connect to the Socket.IO server.
+        // The connection URL has the following format:
+        //     http[s]://<domain>:<port>[/<namespace>]
+        var url = location.protocol + '//' + document.domain + ':' + location.port 
+        $('#url').html('<small><a href="' + url + '/metrics">' + url + '/metrics</a></small>');
+        var socket = io.connect(url + namespace);
+
+
+        // Event handler for new connections.
+        socket.on('connect', function() {
+         $('#status').html("connected");
+        });
+
+        socket.on('disconnect', function() {
+         $('#status').html("not connected");
+        });
+
+        // Event handler for server sent event data.
+        socket.on('event', function(msg) {
+            const url = '/metrics';
+            $.get(url, function(data, status) {
+                var lines = data.split("\n");
+                $('#metrics').html("");
+
+                for (line in data.split("\n")) {
+                    if (lines[line].charAt(0) == "#") {
+                        $('#metrics').append('<span class="text-secondary">' + lines[line] + '</span><br/>')
+                    } else {
+                        $('#metrics').append(lines[line] + '<br/>')
+                    }
+                }
+            })
+        });
+
+        
+    });
+</script>
+{% endblock %}

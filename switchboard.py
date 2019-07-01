@@ -340,6 +340,11 @@ def doc():
     return render_template('doc.html', async_mode=sio.async_mode)
 
 
+@app.route('/prom')
+def prom():
+    return render_template('prom.html', async_mode=sio.async_mode)
+
+
 ##
 ## Prometheus metrics
 ##

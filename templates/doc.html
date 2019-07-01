@@ -3,10 +3,10 @@
 {% block title %}documentation{% endblock %}
 
 {% block content %}
-<h2>REST API:</h2>
-<div>
-<a href='/api/swagger.json'>OpenAPI Specification</a> of REST API in JSON format.<br/>
-Read the doc and interact with the Switchboard REST API via <a href='/api'>Swagger UI</a>.
+<div style="padding-top" class="row">
+        <div class="col-xs-12 col-sm-12 col-md-12">
+            <iframe style="width: 100vw;height: 100vh;position: relative;" src="/api" frameborder="0" allowfullscreen></iframe>
+        </div>
 </div>
 {% endblock %}
 
