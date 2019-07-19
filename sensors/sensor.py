@@ -311,6 +311,7 @@ class Switch(Sensor):
             "OK": True,
             "Yes": True,
             "yes": True,
+            "1": True,
             "False": False,
             "false": False,
             "OFF": False,
@@ -318,7 +319,8 @@ class Switch(Sensor):
             "off": False,
             "LOW": False,
             "No": False,
-            "no": False
+            "no": False,
+            "0": False
         }
 
         if type(value) is str:
