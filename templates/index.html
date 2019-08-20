@@ -106,7 +106,7 @@
                                     if ((typeof ttl == 'number') && ((sensor_type != 3) || (document.getElementById(sensor_label + "_value").innerHTML != default_value.toString()))) {
                                         sensors[sensor_label].ttl_remaining = Math.round(ttl - ((tnow - t)/1000));
                                     } else {
-                                        sensors[sensor_label].ttl_remaining = null;
+                                        sensors[sensor_label].ttl_remaining = 0;
                                     }
                                 
                                 } else {
@@ -137,7 +137,7 @@
 
     var timer = setInterval(function() {
         for (x in sensors) {
-            if (sensors[x].ttl_remaining) {
+            if (sensors[x].ttl_remaining > 0) {
                 $("#" + x + "_ttl").html("(exp " + fmtMSS(sensors[x].ttl_remaining) + ")");
                 sensors[x].ttl_remaining -= 1;
             } else {
