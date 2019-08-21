@@ -8,11 +8,15 @@ RUN apk --update add --virtual build-dependencies build-base tzdata \
   && apk del build-dependencies tzdata \
   && rm -fR /root/.cache
 
-WORKDIR /switchboard
-COPY switchboard.py /switchboard/
-COPY sensors/*py /switchboard/sensors/
-COPY conf/*yml /switchboard/conf/
-COPY templates/*html /switchboard/templates/
+WORKDIR /tmp/x
+COPY sensors/*py ./sensors/
+COPY switchboard/*py ./switchboard/
+COPY switchboard/templates/*html ./switchboard/templates/
+COPY setup.py README.md MANIFEST.in LICENSE requirements.txt ./
+RUN  pip install . 
 
-ENTRYPOINT [ "python", "switchboard.py" ]
+WORKDIR /switchboard
+COPY conf/*yml ./conf/
+
+ENTRYPOINT [ "switchboard" ]
 

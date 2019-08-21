@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from gevent import monkey
 monkey.patch_all()
 from flask import Flask, Blueprint, request, Response, abort, render_template, session
@@ -15,6 +13,7 @@ from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 import json
 import logging
 from sensors import Sensors
+from .version import __version__
 
 # create logger
 logger = logging.getLogger(__name__)
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 ## cmd line argument parser
 ##
 
-parser = ArgumentParser(description='Switchboard')
+parser = ArgumentParser(description='Switchboard {}'.format(__version__))
 parser.add_argument('-a',
                     '--address',
                     action='store',
@@ -99,7 +98,7 @@ logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
 app = Flask(__name__)
 blueprint = Blueprint('api', __name__, url_prefix='/api')
-api = Api(blueprint, doc='/', title='Switchboard API', version='1.0')
+api = Api(blueprint, doc='/', title='Switchboard API', version=__version__)
 bootstrap = Bootstrap(app)
 sensors = Sensors()
 sensors.load_config(pars)
@@ -372,12 +371,16 @@ scheduler.add_job(func=sensors.update_sensors_ttl,
 ##
 
 
-def run_server(addr, port):
+def run_server():
+    logger.info("http server listen {}:{}".format(pars.addr, pars.port))
     log = LoggingLogAdapter(logger, level=logging.DEBUG)
     errlog = LoggingLogAdapter(logger, level=logging.ERROR)
-    http_server = WSGIServer((addr, port), app, log=log, error_log=errlog)
+    http_server = WSGIServer((pars.addr, pars.port),
+                             app,
+                             log=log,
+                             error_log=errlog)
     http_server.serve_forever()
 
 
-logger.info("http server listen {}:{}".format(pars.addr, pars.port))
-run_server(pars.addr, pars.port)
+if __name__ == '__main__':
+    run_server()
