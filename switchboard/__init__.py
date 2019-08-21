@@ -164,6 +164,10 @@ ns_metrics = api.namespace('metrics',
 ns_state = api.namespace('state',
                          description='methods for manipulating process state',
                          path='/state')
+ns_info = api.namespace(
+    'info',
+    description='methods to obtain information',
+    path='/info')
 
 parser = api.parser()
 for sensor_id, t, t_str in sensors.get_parser_arguments():
@@ -310,6 +314,14 @@ class StateDump(Resource):
         '''get all data of all sensors'''
 
         return sensors.get_sensors_dump_dict()
+
+
+@ns_info.route('/version')
+class InfoVersion(Resource):
+    def get(self):
+        '''get app version info'''
+
+        return {'switchboard': __version__}
 
 
 ##
