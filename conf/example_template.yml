@@ -1,4 +1,4 @@
-# example:
+--- # example:
 # - use the template instead of repeating similar node definition
 #
 # you can send temperature by curl
@@ -8,7 +8,7 @@
 #
 # nodes weather1 and weather2 will be created instantly after first hit
 #
-# check it via status page (+ refresh)
+# check it via status page (need refresh)
 #   http://localhost:9128
 
 

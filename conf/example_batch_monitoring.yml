@@ -1,4 +1,4 @@
-# example:
+--- # example:
 # - monitoring state of a batch jobs (backups, ....)
 #
 # - arrange anywhere in your job code notifying of any changes:

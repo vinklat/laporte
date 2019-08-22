@@ -26,30 +26,50 @@
     * switchboard-panel to invoke and display states using a web page (not done)
 
 ## Quick HOWTO:
-### Example:
+### Example 1: a weather station gateway
+
+ - some sensor sends temperature and relative humidity data to this gateway
+ - temperature will be corrected (slope +1% and shift + 0.5) maybe because the sensor might not be accurate :)
+ - other two metrics will be calculated (dew point temperature and absolute humidity)
+ - for an inactive sensor, the data expires in 10 minutes
+
+#### a) run the docker image using the built-in example:
+(the content of this config file can be seen here [example_switch1.yml](conf/example_weatherstation.yml))
+
+`docker run -p 9128:9128 vinklat/switchboard -c conf/example_weatherstation.yml`
+
+#### b) send metrics from sensor via REST API
+
+you can simulate it using curl:  
+
+`curl http://localhost:9128/api/metrics/weather1 -d temp_celsius=37.5 -d hum_ratio=0.8 -X PUT`
+
+#### c) watch status
+ - live status page: [http://localhost:9128](http://localhost:9128)
+ - JSON response of REST API: [http://localhost:9128/api/metrics/by_node](http://localhost:9128/api/metrics/by_node)
+ - Prometheus metrics: [http://localhost:9128/prom](http://localhost:9128/prom)
+
+### Example 2: two on/off switches and the light
 
 We have the following scenario:  
 
 ![switchboard schema](doc/example_switch1.svg)
 
-- two on/off switches
 - the light is active when at least one switch is turned on
 
-#### 1) run docker image:
-`docker run -p 9128:9128 xvin/switchboard -c conf/example_switch1.yml`
+#### a) run docker image:
+`docker run -p 9128:9128 vinklat/switchboard -c conf/example_switch1.yml`
 
 (the content of this config file can be seen here [example_switch1.yml](conf/example_switch1.yml))
 
-#### 2) hit switches:
+#### b) hit switches:
 
 you can control switches via REST API using curl:  
 
 ```
-curl http://localhost:9128/api/metrics/switch1 -d "switch_state=on" -X PUT
-curl http://localhost:9128/api/metrics/switch1 -d "switch_state=off" -X PUT
+curl http://localhost:9128/api/metrics/switch1 -d switch_state=on -X PUT
+curl http://localhost:9128/api/metrics/switch1 -d switch_state=off -X PUT
+curl http://localhost:9128/api/metrics/switch2 -d switch_state=on -X PUT
+curl http://localhost:9128/api/metrics/switch2 -d switch_state=off -X PUT
 ```
-#### 3) watch status
- - live status page: [http://localhost:9128](http://localhost:9128)
- - JSON response of REST API: [http://localhost:9128/api/metrics/by_node](http://localhost:9128/api/metrics/by_node)
- - prometheus metrics: [http://localhost:9128/metrics](http://localhost:9128/metrics)
-
+#### c) watch the status web page or scrape metrics by Prometheus :)

@@ -1,6 +1,9 @@
-# example:
-# - some sensor sends temperature, relative humidity and pressure
-# - the dew point and absolute humidity will be calculated
+--- # example:
+#
+# - some sensor sends temperature and relative humidity data to this gateway
+# - temperature will be corrected (slope +1% and shift + 0.5) maybe because the sensor might not be accurate :)
+# - other two metrics will be calculated (dew point temperature and absolute humidity)
+# - for an inactive sensor, the data expires in 10 minutes
 #
 # you can send metrics by curl (via rest api):
 #
@@ -8,6 +11,7 @@
 #
 # watch metrics via live status page
 #   http://localhost:9128
+
 
 virtual:
     weather1:
