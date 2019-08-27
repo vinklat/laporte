@@ -332,7 +332,7 @@ class InfoVersion(Resource):
 @app.route('/')
 @app.route('/sensors')
 def table():
-    return render_template('index.html',
+    return render_template('sensors.html',
                            time_locale=pars.time_locale,
                            async_mode=sio.async_mode,
                            data=sensors.get_sensors_dump_dict())

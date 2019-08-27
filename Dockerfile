@@ -12,6 +12,7 @@ WORKDIR /tmp/x
 COPY sensors/*py ./sensors/
 COPY switchboard/*py ./switchboard/
 COPY switchboard/templates/*html ./switchboard/templates/
+COPY switchboard/static/js/*js ./switchboard/static/js/
 COPY setup.py README.md MANIFEST.in LICENSE requirements.txt ./
 RUN  pip install . 
 

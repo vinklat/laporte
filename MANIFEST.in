@@ -1,1 +1,2 @@
 recursive-include switchboard/templates *
+recursive-include switchboard/static *
