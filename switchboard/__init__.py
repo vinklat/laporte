@@ -10,6 +10,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from platform import python_version
+import pkg_resources
 import json
 import logging
 from sensors import Sensors
@@ -81,6 +83,33 @@ parser.add_argument(
     help='set the logging output level. {0}'.format(LOG_LEVEL_STRINGS),
     type=log_level_string_to_int,
     default='INFO')
+
+
+def get_build_info():
+    ret = {
+        'switchboard':
+        __version__,
+        'python':
+        python_version(),
+        'flask':
+        pkg_resources.get_distribution("flask").version,
+        'flask-restplus':
+        pkg_resources.get_distribution("flask-restplus").version,
+        'flask-socketio':
+        pkg_resources.get_distribution("flask-socketio").version,
+        'gevent':
+        pkg_resources.get_distribution("gevent").version,
+        'prometheus_client':
+        pkg_resources.get_distribution("prometheus_client").version,
+    }
+
+    return ret
+
+
+parser.add_argument('-V',
+                    '--version',
+                    action='version',
+                    version=str(get_build_info()))
 
 pars = parser.parse_args()
 
@@ -164,10 +193,9 @@ ns_metrics = api.namespace('metrics',
 ns_state = api.namespace('state',
                          description='methods for manipulating process state',
                          path='/state')
-ns_info = api.namespace(
-    'info',
-    description='methods to obtain information',
-    path='/info')
+ns_info = api.namespace('info',
+                        description='methods to obtain information',
+                        path='/info')
 
 parser = api.parser()
 for sensor_id, t, t_str in sensors.get_parser_arguments():
@@ -321,7 +349,7 @@ class InfoVersion(Resource):
     def get(self):
         '''get app version info'''
 
-        return {'switchboard': __version__}
+        return get_build_info()
 
 
 ##
