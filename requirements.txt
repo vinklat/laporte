@@ -8,3 +8,4 @@ gevent
 pyyaml
 jinja2
 asteval
+numpy
