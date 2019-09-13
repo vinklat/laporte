@@ -352,6 +352,22 @@ class InfoVersion(Resource):
         return get_build_info()
 
 
+@ns_info.route('/myip')
+class InfoIP(Resource):
+    def get(self):
+        '''show my IP address + other client info'''
+
+        ret = {
+            'ip': request.remote_addr,
+            'user-agent': request.user_agent.string,
+            'platform': request.user_agent.platform,
+            'browser': request.user_agent.browser,
+            'version': request.user_agent.version
+        }
+
+        return ret
+
+
 ##
 ## Web
 ##
