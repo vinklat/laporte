@@ -45,7 +45,7 @@ class Sensors():
         }
 
         for p in [
-                'default_value', 'accept_refresh', 'ttl', 'hidden',
+                'default_value', 'accept_refresh', 'ttl', 'export',
                 'eval_preserve', 'eval_expr', 'eval_require', 'dataset', 'key'
         ]:
             if p in sensor_config_dict:
@@ -369,24 +369,27 @@ class Sensors():
 
             d = {}
             for sensor in self.sensors.sensor_index:
-                if sensor.hidden:
+                if sensor.export_hidden:
                     continue
 
                 for name, metric_type, value, labels, labels_data in sensor.get_promexport_data(
                 ):
-                    if not name in d:
+                    uniqname = name + '_'.join(labels)
+                    if not uniqname in d:
                         metric_name = "{}_{}".format(EXPORTER_NAME, name)
                         if metric_type == COUNTER:
                             x = CounterMetricFamily(metric_name,
-                                                    '',
+                                                    "with labels: " +
+                                                    ", ".join(labels),
                                                     labels=labels)
                         else:
                             x = GaugeMetricFamily(metric_name,
-                                                  '',
+                                                  "with labels: " +
+                                                  ", ".join(labels),
                                                   labels=labels)
-                        d[name] = x
+                        d[uniqname] = x
                     else:
-                        x = d[name]
+                        x = d[uniqname]
 
                     x.add_metric(labels_data, value)
 
