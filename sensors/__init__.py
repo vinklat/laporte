@@ -374,7 +374,7 @@ class Sensors():
 
                 for name, metric_type, value, labels, labels_data in sensor.get_promexport_data(
                 ):
-                    uniqname = name + '_'.join(labels)
+                    uniqname = name + '_' + '_'.join(labels)
                     if not uniqname in d:
                         metric_name = "{}_{}".format(EXPORTER_NAME, name)
                         if metric_type == COUNTER:
@@ -393,7 +393,7 @@ class Sensors():
 
                     x.add_metric(labels_data, value)
 
-            for q in d:
+            for q in sorted(d, key=str.lower):
                 yield d[q]
 
     def get_parser_arguments(self):
