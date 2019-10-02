@@ -1,0 +1,46 @@
+--- # example:
+#
+# - 3 demo temperature sensors
+#
+# metrics in Prometheus export are labeled, labels are parsed from sensor name 
+# using '_' separator
+# 
+# send metrics by curl (via rest api):
+#
+#   curl http://localhost:9128/api/metrics/weather1 -d device1_temp_celsius=10.1 -d current_device2_temp_celsius=10.2 -d average_device2_temp_celsius=10.3 -X PUT
+#
+# watch metrics + labels via status page
+#   http://localhost:9128/prom
+#
+# switchboard_temp_celsius{device="device1",node="weather1"} 10.1
+# switchboard_temp_celsius{device="device2",node="weather1",type="current"} 10.2
+# switchboard_temp_celsius{device="device2",node="weather1",type="average"} 10.3
+
+
+virtual:
+    weather1:
+        sensors:
+
+            # switchboard_temp_celsius{device="device1",node="weather1"}
+            device1_temp_celsius:
+                type: gauge
+                export:
+                    labels: 
+                        "device" : 1 # 1 = index of split part
+
+            # switchboard_temp_celsius{device="device2",node="weather1",type="current"}
+            current_device2_temp_celsius:
+                type: gauge
+                export:
+                    labels: 
+                        "type" : 1
+                        "device" : 2
+
+            # switchboard_temp_celsius{device="device2",node="weather1",type="average"}
+            average_device2_temp_celsius:
+                type: gauge
+                export:
+                    labels: 
+                        "type" : 1
+                        "device" : 2
+
