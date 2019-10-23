@@ -33,6 +33,7 @@ class Sensors():
                      node_addr,
                      sensor_id,
                      sensor_config_dict,
+                     sensor_parent_config_dict,
                      template=False,
                      mode=SENSOR):
 
@@ -45,9 +46,20 @@ class Sensors():
         }
 
         for p in [
-                'default_value', 'accept_refresh', 'ttl', 'export',
-                'eval_preserve', 'eval_expr', 'eval_require', 'dataset', 'key'
+                'default_value', 'accept_refresh', 'ttl', 'eval_preserve',
+                'eval_expr', 'eval_require', 'dataset', 'key'
         ]:
+            if p in sensor_parent_config_dict:
+                #note: only ttl should pass now
+                param[p] = sensor_parent_config_dict[p]
+
+            if p in sensor_config_dict:
+                param[p] = sensor_config_dict[p]
+
+        for p in ['export']:  #only export at this time
+            if p in sensor_parent_config_dict:
+                param['parent_' + p] = sensor_parent_config_dict[p]
+
             if p in sensor_config_dict:
                 param[p] = sensor_config_dict[p]
 
@@ -87,27 +99,24 @@ class Sensors():
             if not node_id in self.node_template_index:
                 self.node_template_index[node_id] = {}
 
-        if 'sensors' in node_config_dict:
-            for sensor_id, sensor_config_dict in node_config_dict[
-                    'sensors'].items():
-                self.__add_sensor(gw,
-                                  node_id,
-                                  node_addr,
-                                  sensor_id,
-                                  sensor_config_dict,
-                                  template=template,
-                                  mode=SENSOR)
+        sensor_parent_config_dict = {}
 
-        if 'actuators' in node_config_dict:
-            for sensor_id, sensor_config_dict in node_config_dict[
-                    'actuators'].items():
-                self.__add_sensor(gw,
-                                  node_id,
-                                  node_addr,
-                                  sensor_id,
-                                  sensor_config_dict,
-                                  template=template,
-                                  mode=ACTUATOR)
+        for key in ['export', 'ttl']:
+            if key in node_config_dict:
+                sensor_parent_config_dict[key] = node_config_dict[key]
+
+        for key, mode in {'sensors': SENSOR, 'actuators': ACTUATOR}.items():
+            if key in node_config_dict:
+                for sensor_id, sensor_config_dict in node_config_dict[
+                        key].items():
+                    self.__add_sensor(gw,
+                                      node_id,
+                                      node_addr,
+                                      sensor_id,
+                                      sensor_config_dict,
+                                      sensor_parent_config_dict,
+                                      template=template,
+                                      mode=mode)
 
     def __add_gw(self, gw, gw_config_dict):
         for node_id, node_config_dict in gw_config_dict.items():
@@ -256,11 +265,11 @@ class Sensors():
 
         for s in self.sensor_index:
             if s.eval_require is not None:
-                for var, metric_list in s.eval_require.items():
+                for _, metric_list in s.eval_require.items():
                     if len(metric_list) == 3:
-                        (node_id, sensor_id, metric_name) = tuple(metric_list)
+                        (node_id, sensor_id, _) = tuple(metric_list) #unused metric_name
                     elif len(metric_list) == 2:
-                        (sensor_id, metric_name) = tuple(metric_list)
+                        (sensor_id, _) = tuple(metric_list) #unused metric_name
                         node_id = s.node_id
 
                     if node_id == sensor.node_id and sensor_id == sensor.sensor_id and not s in x:
