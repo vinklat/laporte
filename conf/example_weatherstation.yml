@@ -42,7 +42,8 @@ virtual:
                 dataset: true
 
                 # percents should be stored as 0.0-1.0 (ratio)
-                eval_expr: 'value / 100'
+                # uncomment next line if sensor sends 1-100%
+                # eval_expr: 'value / 100'
 
             dew_celsius:
                 type: gauge

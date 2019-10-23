@@ -34,7 +34,7 @@
  - for an inactive sensor, the data expires in 10 minutes
 
 #### a) run the docker image using the built-in example:
-(the content of this config file can be seen here [example_switch1.yml](conf/example_weatherstation.yml))
+(the content of this config file can be seen here [example_weatherstation.yml](conf/example_weatherstation.yml))
 
 `docker run -p 9128:9128 vinklat/switchboard -c conf/example_weatherstation.yml`
 
