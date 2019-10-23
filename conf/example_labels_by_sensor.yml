@@ -1,20 +1,22 @@
---- # example:
+--- 
+# Example of metrics labeling by sensor_id
 #
-# - 3 demo temperature sensors
-#
-# metrics in Prometheus export are labeled, labels are parsed from sensor name 
-# using '_' separator
+# - a node contains 3 temperature sensors:
 # 
-# send metrics by curl (via rest api):
+# you can send metrics by curl (via rest api):
 #
 #   curl http://localhost:9128/api/metrics/weather1 -d device1_temp_celsius=10.1 -d current_device2_temp_celsius=10.2 -d average_device2_temp_celsius=10.3 -X PUT
 #
+# metrics in Prometheus export are labeled, labels are parsed from sensor name 
+# using '_' delimiter
+#
+# result:
+#  switchboard_temp_celsius{device="device1",node="weather1"} 10.1
+#  switchboard_temp_celsius{device="device2",node="weather1",type="current"} 10.2
+#  switchboard_temp_celsius{device="device2",node="weather1",type="average"} 10.3
+#
 # watch metrics + labels via status page
 #   http://localhost:9128/prom
-#
-# switchboard_temp_celsius{device="device1",node="weather1"} 10.1
-# switchboard_temp_celsius{device="device2",node="weather1",type="current"} 10.2
-# switchboard_temp_celsius{device="device2",node="weather1",type="average"} 10.3
 
 
 virtual:
@@ -26,7 +28,8 @@ virtual:
                 type: gauge
                 export:
                     labels: 
-                        "device" : 1 # 1 = index of split part
+                        # label : field of sensor_id string delimited by '_'
+                        "device" : 1 
 
             # switchboard_temp_celsius{device="device2",node="weather1",type="current"}
             current_device2_temp_celsius:

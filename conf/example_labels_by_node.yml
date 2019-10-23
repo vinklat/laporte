@@ -1,0 +1,40 @@
+--- 
+# Example of metrics labeling by node_id
+#
+# - some 2 temperature nodes:
+# 
+# you can send metrics by curl (via rest api):
+#
+#   curl http://localhost:9128/api/metrics/outdoor_weather -d temp_celsius=10.1 -X PUT
+#   curl http://localhost:9128/api/metrics/indoor_weather -d temp_celsius=22.2 -X PUT
+#
+# metrics in Prometheus export are labeled, labels are parsed from node name 
+# using '_' delimiter
+#
+# result:
+#  switchboard_temp_celsius{location="outdoor",node="weather"} 10.1
+#  switchboard_temp_celsius{location="indoor",node="weather"} 22.2
+#
+# watch metrics + labels via status page
+#   http://localhost:9128/prom
+
+
+virtual:
+    #switchboard_temp_celsius{location="outdoor",node="weather"}
+    outdoor_weather:
+        export:
+            labels: 
+                # label : field of node_id string delimited by '_'
+                "location" : 1
+        sensors:
+            temp_celsius:
+                type: gauge
+
+    #switchboard_temp_celsius{location="indoor",node="weather"}
+    indoor_weather:
+        export:
+            labels: 
+                "location" : 1
+        sensors:
+            temp_celsius:
+                type: gauge

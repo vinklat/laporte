@@ -28,7 +28,8 @@ class Sensor(ABC):
     default_value = None
     accept_refresh = None
     ttl = None
-    export_id = None
+    export_sensor_id = None
+    export_node_id = None
     export_labels = None
     export_hidden = None
     eval_require = None
@@ -39,8 +40,8 @@ class Sensor(ABC):
     gw = None
 
     def setup(self, sensor_id, node_addr, key, mode, default_value,
-              accept_refresh, ttl, export, eval_preserve, eval_expr, dataset,
-              eval_require, node_id, gw):
+              accept_refresh, ttl, export, parent_export, eval_preserve,
+              eval_expr, dataset, eval_require, node_id, gw):
         self.node_addr = node_addr
         self.key = key
         self.sensor_id = sensor_id
@@ -55,9 +56,21 @@ class Sensor(ABC):
         self.node_id = node_id
         self.gw = gw
 
-        self.export_id = sensor_id
+        self.export_sensor_id = sensor_id
+        self.export_node_id = node_id
         self.export_hidden = False
         self.export_labels = {}
+
+        if type(parent_export) is dict:
+            if 'hidden' in parent_export:
+                self.export_hidden = parent_export['hidden']
+
+            if 'labels' in parent_export:
+                for label, index in parent_export['labels'].items():
+                    if type(index) is int:
+                        parts = node_id.split('_', index)
+                        self.export_labels[label] = parts[index - 1]
+                        self.export_node_id = parts[index]
 
         if type(export) is dict:
             if 'hidden' in export:
@@ -68,7 +81,7 @@ class Sensor(ABC):
                     if type(index) is int:
                         parts = sensor_id.split('_', index)
                         self.export_labels[label] = parts[index - 1]
-                        self.export_id = parts[index]
+                        self.export_sensor_id = parts[index]
 
     @abstractmethod
     def get_type(self):
@@ -103,18 +116,20 @@ class Sensor(ABC):
             labels.append(label)
             label_values.append(label_value)
 
-        if (self.value is not None) and (t is not MESSAGE):
-            yield self.export_id, t, self.value, ['node'] + labels, [
-                self.node_id
+        if (self.value is not None):
+            yield self.export_sensor_id, t, self.value, ['node'] + labels, [
+                self.export_node_id
             ] + label_values
         if self.hits_total is not None:
             yield 'hits_total', COUNTER, self.hits_total, [
                 'node', 'sensor'
-            ] + labels, [self.node_id, self.export_id] + label_values
+            ] + labels, [self.export_node_id, self.export_sensor_id
+                         ] + label_values
         if self.duration_seconds is not None:
             yield 'duration_seconds', COUNTER, self.duration_seconds, [
                 'node', 'sensor'
-            ] + labels, [self.node_id, self.export_id] + label_values
+            ] + labels, [self.export_node_id, self.export_sensor_id
+                         ] + label_values
 
     @abstractmethod
     def reset(self):
@@ -256,6 +271,7 @@ class Gauge(Sensor):
                  accept_refresh=True,
                  ttl=None,
                  export=False,
+                 parent_export=False,
                  eval_preserve=False,
                  eval_expr=None,
                  dataset=False,
@@ -264,8 +280,8 @@ class Gauge(Sensor):
                  gw=None):
 
         self.setup(sensor_id, node_addr, key, mode, default_value,
-                   accept_refresh, ttl, export, eval_preserve, eval_expr,
-                   dataset, eval_require, node_id, gw)
+                   accept_refresh, ttl, export, parent_export, eval_preserve,
+                   eval_expr, dataset, eval_require, node_id, gw)
 
         self.hold = None
         self.hits_total = 0
@@ -298,6 +314,7 @@ class Counter(Sensor):
                  accept_refresh=False,
                  ttl=None,
                  export=False,
+                 parent_export=False,
                  eval_preserve=False,
                  eval_expr=None,
                  dataset=False,
@@ -306,8 +323,8 @@ class Counter(Sensor):
                  gw=None):
 
         self.setup(sensor_id, node_addr, key, mode, default_value,
-                   accept_refresh, ttl, export, eval_preserve, eval_expr,
-                   dataset, eval_require, node_id, gw)
+                   accept_refresh, ttl, export, parent_export, eval_preserve,
+                   eval_expr, dataset, eval_require, node_id, gw)
 
         self.hold = None
         self.hits_total = 0
@@ -364,6 +381,7 @@ class Switch(Sensor):
                  accept_refresh=False,
                  ttl=None,
                  export=False,
+                 parent_export=False,
                  eval_preserve=False,
                  eval_expr=None,
                  dataset=False,
@@ -372,8 +390,8 @@ class Switch(Sensor):
                  gw=None):
 
         self.setup(sensor_id, node_addr, key, mode, default_value,
-                   accept_refresh, ttl, export, eval_preserve, eval_expr,
-                   dataset, eval_require, node_id, gw)
+                   accept_refresh, ttl, export, parent_export, eval_preserve,
+                   eval_expr, dataset, eval_require, node_id, gw)
         self.hold = None
         self.value = self.default_value
         self.prev_value = self.default_value
@@ -407,6 +425,7 @@ class Message(Sensor):
                  accept_refresh=False,
                  ttl=None,
                  export=False,
+                 parent_export=False,
                  eval_preserve=False,
                  eval_expr=None,
                  dataset=False,
@@ -415,8 +434,8 @@ class Message(Sensor):
                  gw=None):
 
         self.setup(sensor_id, node_addr, key, mode, default_value,
-                   accept_refresh, ttl, export, eval_preserve, eval_expr,
-                   dataset, eval_require, node_id, gw)
+                   accept_refresh, ttl, export, parent_export, eval_preserve,
+                   eval_expr, dataset, eval_require, node_id, gw)
         self.hold = None
         self.value = self.default_value
         self.prev_value = self.default_value
@@ -424,3 +443,4 @@ class Message(Sensor):
         self.duration_seconds = None
         self.hit_timestamp = None
         self.ttl_remaining = None
+        self.export_hidden = True
