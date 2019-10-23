@@ -265,11 +265,11 @@ class Sensors():
 
         for s in self.sensor_index:
             if s.eval_require is not None:
-                for var, metric_list in s.eval_require.items():
+                for _, metric_list in s.eval_require.items():
                     if len(metric_list) == 3:
-                        (node_id, sensor_id, metric_name) = tuple(metric_list)
+                        (node_id, sensor_id, _) = tuple(metric_list) #unused metric_name
                     elif len(metric_list) == 2:
-                        (sensor_id, metric_name) = tuple(metric_list)
+                        (sensor_id, _) = tuple(metric_list) #unused metric_name
                         node_id = s.node_id
 
                     if node_id == sensor.node_id and sensor_id == sensor.sensor_id and not s in x:
