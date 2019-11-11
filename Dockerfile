@@ -9,7 +9,6 @@ RUN apk --update add --virtual build-dependencies build-base tzdata \
   && rm -fR /root/.cache
 
 WORKDIR /tmp/x
-COPY sensors/*py ./sensors/
 COPY switchboard/*py ./switchboard/
 COPY switchboard/templates/*html ./switchboard/templates/
 COPY switchboard/static/js/*js ./switchboard/static/js/
@@ -20,4 +19,3 @@ WORKDIR /switchboard
 COPY conf/*yml ./conf/
 
 ENTRYPOINT [ "switchboard" ]
-

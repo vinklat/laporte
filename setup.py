@@ -39,5 +39,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     entry_points={
-        'console_scripts': ['switchboard=switchboard:run_server'],
+        'console_scripts': ['switchboard=switchboard.server:run_server'],
     })
