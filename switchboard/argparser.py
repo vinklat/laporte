@@ -8,9 +8,10 @@ from switchboard.version import __version__, get_build_info
 _LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 
 
-def log_level_string_to_int(log_level_string):
+def log_level_string_to_int(arg_string):
     '''get log level int from string'''
 
+    log_level_string = arg_string.upper()
     if log_level_string not in _LOG_LEVEL_STRINGS:
         message = 'invalid choice: {0} (choose from {1})'.format(
             log_level_string, _LOG_LEVEL_STRINGS)
