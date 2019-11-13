@@ -1,9 +1,12 @@
-from abc import ABC, abstractmethod
-from asteval import Interpreter, make_symbol_table
-from time import time
+# -*- coding: utf-8 -*-
+'''objects that collect config and internal states of one sensor'''
+
 import re
-import numpy as np
+# import numpy as np
 import logging
+from abc import ABC, abstractmethod
+from time import time
+from asteval import Interpreter, make_symbol_table
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -18,9 +21,9 @@ MESSAGE = 4
 
 
 class Sensor(ABC):
-    '''object that associates sensor config, state and related metadata'''
+    '''abstract base class for Gauge, Counter, Switch and Message class'''
 
-    #config attributes:
+    # config attributes:
     node_addr = None
     key = None
     sensor_id = None
@@ -42,6 +45,8 @@ class Sensor(ABC):
     def setup(self, sensor_id, node_addr, key, mode, default_value,
               accept_refresh, ttl, export, parent_export, eval_preserve,
               eval_expr, dataset, eval_require, node_id, gw):
+        '''assign values to the data members of the class'''
+
         self.node_addr = node_addr
         self.key = key
         self.sensor_id = sensor_id
@@ -61,24 +66,24 @@ class Sensor(ABC):
         self.export_hidden = False
         self.export_labels = {}
 
-        if type(parent_export) is dict:
+        if isinstance(parent_export, dict):
             if 'hidden' in parent_export:
                 self.export_hidden = parent_export['hidden']
 
             if 'labels' in parent_export:
                 for label, index in parent_export['labels'].items():
-                    if type(index) is int:
+                    if isinstance(index, int):
                         parts = node_id.split('_', index)
                         self.export_labels[label] = parts[index - 1]
                         self.export_node_id = parts[index]
 
-        if type(export) is dict:
+        if isinstance(export, dict):
             if 'hidden' in export:
                 self.export_hidden = export['hidden']
 
             if 'labels' in export:
                 for label, index in export['labels'].items():
-                    if type(index) is int:
+                    if isinstance(index, int):
                         parts = sensor_id.split('_', index)
                         self.export_labels[label] = parts[index - 1]
                         self.export_sensor_id = parts[index]
@@ -90,7 +95,7 @@ class Sensor(ABC):
     def is_actuator(self):
         return self.mode == ACTUATOR
 
-    #state attributes
+    # state attributes
     value = None
     prev_value = None
     hits_total = None
@@ -116,7 +121,7 @@ class Sensor(ABC):
             labels.append(label)
             label_values.append(label_value)
 
-        if (self.value is not None):
+        if self.value is not None:
             yield self.export_sensor_id, t, self.value, ['node'] + labels, [
                 self.export_node_id
             ] + label_values
@@ -164,7 +169,7 @@ class Sensor(ABC):
 
         self.value = value
 
-        if update:  #update metadata
+        if update:  # update metadata
             self.count_hit()
 
             if self.ttl is not None:
@@ -217,11 +222,10 @@ class Sensor(ABC):
                 self.sensor_id: x
             }}))
             return self.set(x, update=update)
-        else:
-            logging.debug("can't eval {}.{}".format(self.node_id,
-                                                    self.sensor_id))
-            if len(aeval.error) > 0:
-                logging.debug(aeval.error[0].get_error())
+
+        logging.debug("can't eval {}.{}".format(self.node_id, self.sensor_id))
+        if len(aeval.error) > 0:
+            logging.debug(aeval.error[0].get_error())
 
         return 0
 
@@ -239,15 +243,19 @@ class Sensor(ABC):
             if self.ttl_remaining > 0:
                 self.ttl_remaining -= interval
                 return 0
-            else:
-                self.reset()
-                return 1
+            self.reset()  # else
+            return 1
+        return 0
 
     def set_hold(self, release=False):
         self.hold = not release
 
 
 class Gauge(Sensor):
+    '''An object that collects state and metadata of the Gauge sensor.
+       A gauge is a metric that represents a single numerical value that can arbitrarily go up and down.
+    '''
+
     def get_type(self):
         return GAUGE
 
@@ -258,7 +266,7 @@ class Gauge(Sensor):
         self.dataset_used = False
 
     def fix_value(self, value):
-        if type(value) is str:
+        if isinstance(value, str):
             value = float(value)
         return value
 
@@ -291,6 +299,11 @@ class Gauge(Sensor):
 
 
 class Counter(Sensor):
+    '''An object that collects state and metadata of the Counter type sensor.
+       A counter is a cumulative metric that represents a single monotonically
+       increasing counter whose value can only increase or be reset to zero.
+    '''
+
     def get_type(self):
         return COUNTER
 
@@ -301,7 +314,7 @@ class Counter(Sensor):
         self.dataset_used = False
 
     def fix_value(self, value):
-        if type(value) is str:
+        if isinstance(value, str):
             value = float(value)
         return value
 
@@ -334,6 +347,11 @@ class Counter(Sensor):
 
 
 class Switch(Sensor):
+    '''An object that collects state and metadata of the Switch type sensor
+       The switch is a metric that represents a single boolean 
+       value On/Off (True/False).
+    '''
+
     def get_type(self):
         return SWITCH
 
@@ -343,7 +361,7 @@ class Switch(Sensor):
         self.ttl_remaining = None
 
     def fix_value(self, value):
-        m = {
+        values_map = {
             "True": True,
             "true": True,
             "ON": True,
@@ -364,9 +382,9 @@ class Switch(Sensor):
             "0": False
         }
 
-        if type(value) is str:
+        if isinstance(value, str):
             try:
-                value = m[value]
+                value = values_map[value]
             except KeyError:
                 value = bool(value)
 
@@ -404,6 +422,11 @@ class Switch(Sensor):
 
 
 class Message(Sensor):
+    '''An object that collects state and metadata of the Message (string) sensor.
+       This is not a metric but represents a text string that can be displayed
+       or parsed to metric.
+    '''
+
     def get_type(self):
         return MESSAGE
 

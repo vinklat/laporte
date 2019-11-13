@@ -1,11 +1,14 @@
-from sensors.sensor import Gauge, Counter, Switch, Message
-from sensors.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
-from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
-from copy import copy
+# -*- coding: utf-8 -*-
+'''objects that collect sets of sensors'''
+
 import json
 import yaml
 import jinja2
 import logging
+from copy import copy
+from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
+from switchboard.sensor import Gauge, Counter, Switch, Message
+from switchboard.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -15,7 +18,7 @@ SETUP = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
 
 
 class Sensors():
-    '''container to store sensors'''
+    '''container to store a set of sensors'''
 
     def reset(self):
         self.node_id_index = {}
@@ -26,6 +29,7 @@ class Sensors():
     def __init__(self):
         self.reset()
         self.sio = None
+        self.prev_data = {}
 
     def __add_sensor(self,
                      gw,
@@ -93,10 +97,10 @@ class Sensors():
             node_addr = None
 
         if not template:
-            if not node_id in self.node_id_index:
+            if node_id not in self.node_id_index:
                 self.node_id_index[node_id] = {}
         else:
-            if not node_id in self.node_template_index:
+            if node_id not in self.node_template_index:
                 self.node_template_index[node_id] = {}
 
         sensor_parent_config_dict = {}
@@ -267,9 +271,11 @@ class Sensors():
             if s.eval_require is not None:
                 for _, metric_list in s.eval_require.items():
                     if len(metric_list) == 3:
-                        (node_id, sensor_id, _) = tuple(metric_list) #unused metric_name
+                        (node_id, sensor_id,
+                         _) = tuple(metric_list)  # unused metric_name
                     elif len(metric_list) == 2:
-                        (sensor_id, _) = tuple(metric_list) #unused metric_name
+                        (sensor_id,
+                         _) = tuple(metric_list)  # unused metric_name
                         node_id = s.node_id
 
                     if node_id == sensor.node_id and sensor_id == sensor.sensor_id and not s in x:

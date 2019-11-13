@@ -1,6 +1,7 @@
-"""Main entry point."""
-# pylint: disable=invalid-name
+# -*- coding: utf-8 -*-
+'''main entry point for the Switchboard Flask application'''
 
-import switchboard
+from switchboard.server import run_server
 
-switchboard.run_server()
+if __name__ == '__main__':
+    run_server()
