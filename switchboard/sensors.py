@@ -137,6 +137,14 @@ class Sensors():
     def __get_sensor(self, node_id, sensor_id):
         return self.node_id_index[node_id][sensor_id]
 
+    def __find_addr(self, node_addr, key):
+        '''return a sensor with given node_addr and key'''
+
+        for sensor in self.sensor_index:
+            if (sensor.node_addr == node_addr) and (sensor.key == key):
+                return sensor
+        return None
+
     def get_metrics_of_sensor(self, node_id, sensor_id):
         sensor = self.__get_sensor(node_id, sensor_id)
         return sensor.get_data(skip_None=False, selected=METRICS)
@@ -297,29 +305,75 @@ class Sensors():
     def emit_changes(self, diff):
         ''' emit sensor data of chaged nodes to SocketIO event log namespace'''
 
+        actuator_id_values = {}
+        actuator_addr_values = {}
+
         if diff and self.sio is not None:
             for node_id in diff:
-                logging.info('complete sensor changes: {}'.format(
-                    {node_id: diff[node_id]}))
+                logging.info('complete sensor changes: %s',
+                             {node_id: diff[node_id]})
                 self.sio.emit('event',
                               json.dumps({node_id: diff[node_id]}),
                               broadcast=True,
                               namespace='/events')
+
                 for sensor_id, metrics in diff[node_id].items():
                     sensor = self.__get_sensor(node_id, sensor_id)
                     for metric in metrics:
                         if sensor.mode == ACTUATOR and metric == 'value':
-                            logging.debug(
-                                'emit actuator event: {}.{}: {}'.format(
-                                    node_id, sensor_id, sensor.value))
-                            self.sio.emit('actuator_response',
-                                          json.dumps({
-                                              node_id: {
-                                                  sensor_id: sensor.value
-                                              }
-                                          }),
-                                          room=sensor.gw,
-                                          namespace='/sensors')
+                            if sensor.gw not in actuator_id_values:
+                                actuator_id_values[sensor.gw] = {}
+                            if node_id not in actuator_id_values[sensor.gw]:
+                                actuator_id_values[sensor.gw][node_id] = {}
+                            actuator_id_values[
+                                sensor.gw][node_id][sensor_id] = sensor.value
+                            if (sensor.node_addr != "") and (sensor.key != ""):
+                                if sensor.gw not in actuator_addr_values:
+                                    actuator_addr_values[sensor.gw] = {}
+                                if sensor.node_addr not in actuator_addr_values[
+                                        sensor.gw]:
+                                    actuator_addr_values[sensor.gw][
+                                        sensor.node_addr] = {}
+                                actuator_addr_values[sensor.gw][
+                                    sensor.node_addr][
+                                        sensor.key] = sensor.value
+
+        if actuator_id_values:
+            for gateway, data in actuator_id_values.items():
+                logging.info('changed actuator ids: %s', data)
+                self.sio.emit('actuator_response',
+                              json.dumps({gateway: data}),
+                              room=gateway,
+                              namespace='/sensors')
+
+        if actuator_addr_values:
+            for gateway, data in actuator_addr_values.items():
+                logging.info('changed actuator addrs: %s', data)
+                self.sio.emit('actuator_addr_response',
+                              json.dumps({gateway: data}),
+                              room=gateway,
+                              namespace='/sensors')
+
+    def conv_addrs_to_ids(self, addrs_dict):
+        '''
+        convert {node_addr:{key:value}} dict 
+        to 
+        {node_id:{sensor_id:value}} dict
+        '''
+
+        ret = {}
+        for node_addr, key_values_dict in addrs_dict.items():
+            for key, value in key_values_dict.items():
+
+                sensor = self.__find_addr(node_addr, key)
+                if sensor is not None:
+                    if sensor.node_id not in ret:
+                        ret[sensor.node_id] = {}
+                    ret[sensor.node_id][sensor.sensor_id] = value
+                else:
+                    logging.warning("sensor %s:%s not found in node",
+                                    node_addr, key)
+        return ret
 
     def set_values(self, node_id, sensor_values_dict, increment=False):
         changed = 0

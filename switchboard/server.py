@@ -29,22 +29,44 @@ pars = get_pars()
 logging.basicConfig(format='%(levelname)s %(module)s: %(message)s',
                     level=pars.log_level)
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
+if pars.log_level == logging.DEBUG:
+    logging.getLogger('socketio').setLevel(logging.DEBUG)
+    logging.getLogger('engineio').setLevel(logging.DEBUG)
+else:
+    logging.getLogger('socketio').setLevel(logging.WARNING)
+    logging.getLogger('engineio').setLevel(logging.WARNING)
 
+ 
+class MetricsNamespace(Namespace):
+    '''Socket.IO namespace for set/retrieve metrics of sensors'''
 
-# Socket.IO namespaces
-class SensorsNamespace(Namespace):
     def on_sensor_response(self, message):
-        logger.debug('SocketIO: {} '.format(message))
+        '''receive metrics of changed sensors identified by node_id/sensor_id'''
+
         for node_id in message:
             request_form = message[node_id]
-            logger.info('SocketIO in: {}: {}'.format(node_id,
-                                                     str(request_form)))
+            logger.info('SocketIO message: node_id=%s: data=%s', node_id,
+                        str(request_form))
+            try:
+                sensors.set_values(node_id, request_form)
+            except KeyError:
+                pass
+
+    def on_sensor_addr_response(self, message):
+        '''receive metrics of changed sensors identified by node_addr/key'''
+        
+        for node_id, request_form in sensors.conv_addrs_to_ids(
+                message).items():
+            logger.info('SocketIO translated message: node_id=%s: data=%s',
+                        node_id, str(request_form))
             try:
                 sensors.set_values(node_id, request_form)
             except KeyError:
                 pass
 
     def on_join(self, message):
+        '''fired upon gateway join'''
+
         logger.debug('SocketIO client join: {} '.format(message))
         gw = message['room']
         join_room(gw)
@@ -52,20 +74,20 @@ class SensorsNamespace(Namespace):
         emit('config_response', {gw: list(sensors.get_config_of_gw(gw))})
 
     def on_connect(self):
-        emit('status_response', {'status': 'connected'})
+        '''fired upon a successful connection'''
 
-    def on_ping(self):
-        emit('pong')
+        emit('status_response', {'status': 'connected'})
 
 
 class EventsNamespace(Namespace):
+    '''Socket.IO namespace for events emit'''
+
     def on_connect(self):
+        '''emit initital event after a successful connection'''
+
         emit('event',
              json.dumps(sensors.get_metrics_dict_by_node(skip_None=False)),
              broadcast=True)
-
-    def on_ping(self):
-        emit('pong')
 
 
 # create Flask application
@@ -79,7 +101,7 @@ app.register_blueprint(blueprint)
 REGISTRY.register(sensors.CustomCollector(sensors))
 
 sio = SocketIO(app, async_mode='gevent')
-sio.on_namespace(SensorsNamespace('/sensors'))
+sio.on_namespace(MetricsNamespace('/sensors'))
 sio.on_namespace(EventsNamespace('/events'))
 sensors.sio = sio
 
