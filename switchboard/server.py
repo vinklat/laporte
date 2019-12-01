@@ -4,6 +4,8 @@
 
 from gevent import monkey
 monkey.patch_all()
+import logging
+import json
 from flask import Flask, Blueprint, request, Response, abort, render_template
 from flask_restplus import Api, Resource
 from flask_socketio import SocketIO, Namespace, emit, join_room, rooms
@@ -13,11 +15,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-import json
-import logging
 from switchboard.version import __version__, get_build_info
 from switchboard.argparser import get_pars
-from switchboard.sensors import Sensors
+from switchboard.sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
 
 # create logger
 logger = logging.getLogger(__name__)
@@ -36,11 +36,12 @@ else:
     logging.getLogger('socketio').setLevel(logging.WARNING)
     logging.getLogger('engineio').setLevel(logging.WARNING)
 
- 
+
 class MetricsNamespace(Namespace):
     '''Socket.IO namespace for set/retrieve metrics of sensors'''
 
-    def on_sensor_response(self, message):
+    @staticmethod
+    def on_sensor_response(message):
         '''receive metrics of changed sensors identified by node_id/sensor_id'''
 
         for node_id in message:
@@ -52,9 +53,10 @@ class MetricsNamespace(Namespace):
             except KeyError:
                 pass
 
-    def on_sensor_addr_response(self, message):
+    @staticmethod
+    def on_sensor_addr_response(message):
         '''receive metrics of changed sensors identified by node_addr/key'''
-        
+
         for node_id, request_form in sensors.conv_addrs_to_ids(
                 message).items():
             logger.info('SocketIO translated message: node_id=%s: data=%s',
@@ -64,7 +66,8 @@ class MetricsNamespace(Namespace):
             except KeyError:
                 pass
 
-    def on_join(self, message):
+    @staticmethod
+    def on_join(message):
         '''fired upon gateway join'''
 
         logger.debug('SocketIO client join: {} '.format(message))
@@ -73,21 +76,27 @@ class MetricsNamespace(Namespace):
         emit('status_response', {'joined in': rooms()})
         emit('config_response', {gw: list(sensors.get_config_of_gw(gw))})
 
-    def on_connect(self):
-        '''fired upon a successful connection'''
-
-        emit('status_response', {'status': 'connected'})
-
 
 class EventsNamespace(Namespace):
     '''Socket.IO namespace for events emit'''
 
-    def on_connect(self):
+    @staticmethod
+    def on_connect():
         '''emit initital event after a successful connection'''
 
-        emit('event',
+        emit('init_response',
              json.dumps(sensors.get_metrics_dict_by_node(skip_None=False)),
-             broadcast=True)
+             namespace=EVENTS_NAMESPACE)
+
+
+class DefaultNamespace(Namespace):
+    '''Socket.IO namespace for default responses'''
+
+    @staticmethod
+    def on_connect():
+        '''fired upon a successful connection'''
+
+        emit('status_response', {'status': 'connected'})
 
 
 # create Flask application
@@ -99,10 +108,10 @@ sensors = Sensors()
 app.config.SWAGGER_UI_DOC_EXPANSION = 'list'
 app.register_blueprint(blueprint)
 REGISTRY.register(sensors.CustomCollector(sensors))
-
-sio = SocketIO(app, async_mode='gevent')
-sio.on_namespace(MetricsNamespace('/sensors'))
-sio.on_namespace(EventsNamespace('/events'))
+sio = SocketIO(app, async_mode='gevent', engineio_logger=True)
+sio.on_namespace(DefaultNamespace('/'))
+sio.on_namespace(MetricsNamespace(METRICS_NAMESPACE))
+sio.on_namespace(EventsNamespace(EVENTS_NAMESPACE))
 sensors.sio = sio
 
 # REST API methods

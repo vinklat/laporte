@@ -13,6 +13,9 @@ from switchboard.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
+METRICS_NAMESPACE = '/metrics'
+EVENTS_NAMESPACE = '/events'
+
 METRICS = {'value', 'hits_total', 'hit_timestamp', 'duration_seconds'}
 SETUP = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
 
@@ -312,10 +315,9 @@ class Sensors():
             for node_id in diff:
                 logging.info('complete sensor changes: %s',
                              {node_id: diff[node_id]})
-                self.sio.emit('event',
+                self.sio.emit('update_response',
                               json.dumps({node_id: diff[node_id]}),
-                              broadcast=True,
-                              namespace='/events')
+                              namespace=EVENTS_NAMESPACE)
 
                 for sensor_id, metrics in diff[node_id].items():
                     sensor = self.__get_sensor(node_id, sensor_id)
@@ -344,7 +346,7 @@ class Sensors():
                 self.sio.emit('actuator_response',
                               json.dumps({gateway: data}),
                               room=gateway,
-                              namespace='/sensors')
+                              namespace=METRICS_NAMESPACE)
 
         if actuator_addr_values:
             for gateway, data in actuator_addr_values.items():
@@ -352,7 +354,7 @@ class Sensors():
                 self.sio.emit('actuator_addr_response',
                               json.dumps({gateway: data}),
                               room=gateway,
-                              namespace='/sensors')
+                              namespace=METRICS_NAMESPACE)
 
     def conv_addrs_to_ids(self, addrs_dict):
         '''
@@ -521,5 +523,5 @@ class Sensors():
         self.reset()
         changes = self.load_config(pars)
         self.emit_changes(changes)
-        self.sio.emit('reload', broadcast=True, namespace='/sensors')
+        self.sio.emit('reload_response')
         return changes
