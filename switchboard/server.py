@@ -10,6 +10,7 @@ from flask import Flask, Blueprint, request, Response, abort, render_template
 from flask_restplus import Api, Resource
 from flask_socketio import SocketIO, Namespace, emit, join_room, rooms
 from flask_bootstrap import Bootstrap
+from geventwebsocket.handler import WebSocketHandler
 from gevent.pywsgi import WSGIServer, LoggingLogAdapter
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -354,6 +355,7 @@ def run_server():
     http_server = WSGIServer((pars.addr, pars.port),
                              app,
                              log=log,
-                             error_log=errlog)
+                             error_log=errlog,
+                             handler_class=WebSocketHandler)
     sensors.load_config(pars)
     http_server.serve_forever()

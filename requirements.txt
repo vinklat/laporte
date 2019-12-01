@@ -1,10 +1,12 @@
 flask
 flask-restplus
 flask-socketio
+python-socketio[client]
 bootstrap_flask
 prometheus_client
 apscheduler
 gevent
+gevent-websocket
 pyyaml
 jinja2
 asteval

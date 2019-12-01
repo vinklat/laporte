@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-'''a Python package containing Switchboard http server/client modules'''
+'''a Python package containing Switchboard client/server modules'''
 
-from switchboard.sensor import Sensor
-from switchboard.sensors import Sensors
+from switchboard.client import SwitchboardClient
 
-__all__ = ['Sensor', 'Sensors']
+__all__ = ['SwitchboardClient']

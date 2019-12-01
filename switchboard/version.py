@@ -20,6 +20,10 @@ def get_build_info():
         pkg_resources.get_distribution("flask-restplus").version,
         'flask-socketio':
         pkg_resources.get_distribution("flask-socketio").version,
+        'python-socketio':
+        pkg_resources.get_distribution("python-socketio").version,
+        'python-engineio':
+        pkg_resources.get_distribution("python-engineio").version,
         'gevent':
         pkg_resources.get_distribution("gevent").version,
         'prometheus_client':
