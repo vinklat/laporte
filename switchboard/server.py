@@ -12,7 +12,7 @@ from flask_socketio import SocketIO, Namespace, emit, join_room, rooms
 from flask_bootstrap import Bootstrap
 from geventwebsocket.handler import WebSocketHandler
 from gevent.pywsgi import WSGIServer, LoggingLogAdapter
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.gevent import GeventScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
@@ -338,7 +338,7 @@ def metrics():
 
 
 # start scheduler
-scheduler = BackgroundScheduler()
+scheduler = GeventScheduler()
 scheduler.start()
 scheduler.add_job(func=sensors.update_sensors_ttl,
                   trigger=IntervalTrigger(seconds=1),
