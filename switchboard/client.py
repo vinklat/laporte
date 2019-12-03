@@ -107,18 +107,30 @@ class EventsNamespace(socketio.ClientNamespace):
     '''class-based Socket.IO event handlers for events'''
 
     @staticmethod
-    def default_init_handler(data):
-        '''default function launched upon an update response'''
+    def default_init_handler(nodes):
+        '''
+        Default function launched upon an init response.
 
-        nodes = len(data)
-        logging.debug("empty default_init_handler for %d nodes", nodes)
+        Args:
+            nodes (Dict[str: Dict[str: Dict[str: Any]]]):
+                dicts of node_ids with dict of sensor_ids with dicts of changed metrics
+        '''
+
+        logging.debug("empty default_init_handler for %d nodes", len(nodes))
 
     @staticmethod
-    def default_update_handler(node_id, metrics):
-        '''default function launched upon an update response'''
+    def default_update_handler(node_id, sensors):
+        '''
+        Default function launched upon an update response.
 
-        del metrics  # Ignored parameter
-        logging.debug("empty default_update_handler for %s", node_id)
+        Args:
+            node_id (str):
+                a node with changed metrics
+            sensors (Dict[str: Dict[str: Any]]):
+                dict of sensor_ids with dicts of changed metrics
+        '''
+
+        logging.debug("empty default_update_handler for %s with %s chenged metrics", node_id, len(sensors))
 
     init_handler = default_init_handler
     update_handler = default_update_handler
@@ -191,25 +203,40 @@ class DefaultNamespace(socketio.ClientNamespace):
 
 
 class SwitchboardClient():
-    '''object containing Socket.IO client with registered metrics namespace'''
+    '''Object containing Socket.IO client with registered namespaces.'''
 
-    def __init__(self, addr, port, gateway_list):
-        '''connect to a switchboard server'''
+    def __init__(self, addr, port, gateways=None, events=False):
+        '''
+        Connect to the switchboard server.
 
+            addr (str):
+                Hostname or IP of switchboard server.
+            port (int):
+                 Port of switchboard server.
+            gateways (Optional[List[str]]):
+                List of gateways to be joined in. Defaults to None. Register metrics namespece if set.
+            events (Optional[bool]):
+                Register events namespace. Defaults to False.
+        '''
+
+        namespaces = []
         self.sio = socketio.Client(logger=True, engineio_logger=True)
-
         self.ns_default = DefaultNamespace('/')
+        self.ns_metrics = MetricsNamespace(METRICS_NAMESPACE)
+        self.ns_events = EventsNamespace(EVENTS_NAMESPACE)
         self.sio.register_namespace(self.ns_default)
 
-        self.ns_metrics = MetricsNamespace(METRICS_NAMESPACE)
-        self.ns_metrics.gateways = gateway_list
-        self.sio.register_namespace(self.ns_metrics)
+        if isinstance(gateways, list):
+            namespaces.append(METRICS_NAMESPACE)
+            self.ns_metrics.gateways = gateways
+            self.sio.register_namespace(self.ns_metrics)
 
-        self.ns_events = EventsNamespace(EVENTS_NAMESPACE)
-        self.sio.register_namespace(self.ns_events)
+        if events:
+            namespaces.append(EVENTS_NAMESPACE)
+            self.sio.register_namespace(self.ns_events)
 
-        self.sio.connect('http://{}:{}'.format(
-            addr, port, namespaces=['/', METRICS_NAMESPACE, EVENTS_NAMESPACE]))
+        self.sio.connect('http://{}:{}'.format(addr, port),
+                         namespaces=namespaces)
 
     def loop(self):
         '''main loop for Socket.IO client'''
