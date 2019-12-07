@@ -1,4 +1,4 @@
---- # example:
+---
 # - two switches with 20s delay
 # - the light works during the activity of at least one switch
 #

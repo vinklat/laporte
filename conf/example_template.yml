@@ -1,4 +1,4 @@
---- # example:
+---
 # - use the template instead of repeating similar node definition
 #
 # you can send temperature by curl

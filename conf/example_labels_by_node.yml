@@ -12,15 +12,15 @@
 # using '_' delimiter
 #
 # result:
-#  switchboard_temp_celsius{location="outdoor",node="weather"} 10.1
-#  switchboard_temp_celsius{location="indoor",node="weather"} 22.2
+#  laporte_temp_celsius{location="outdoor",node="weather"} 10.1
+#  laporte_temp_celsius{location="indoor",node="weather"} 22.2
 #
 # watch metrics + labels via status page
 #   http://localhost:9128/prom
 
 
 virtual:
-    #switchboard_temp_celsius{location="outdoor",node="weather"}
+    #laporte_temp_celsius{location="outdoor",node="weather"}
     outdoor_weather:
         export:
             labels: 
@@ -30,7 +30,7 @@ virtual:
             temp_celsius:
                 type: gauge
 
-    #switchboard_temp_celsius{location="indoor",node="weather"}
+    #laporte_temp_celsius{location="indoor",node="weather"}
     indoor_weather:
         export:
             labels: 

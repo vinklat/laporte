@@ -11,9 +11,9 @@
 # using '_' delimiter
 #
 # result:
-#  switchboard_temp_celsius{device="device1",node="weather1"} 10.1
-#  switchboard_temp_celsius{device="device2",node="weather1",type="current"} 10.2
-#  switchboard_temp_celsius{device="device2",node="weather1",type="average"} 10.3
+#  laporte_temp_celsius{device="device1",node="weather1"} 10.1
+#  laporte_temp_celsius{device="device2",node="weather1",type="current"} 10.2
+#  laporte_temp_celsius{device="device2",node="weather1",type="average"} 10.3
 #
 # watch metrics + labels via status page
 #   http://localhost:9128/prom
@@ -23,7 +23,7 @@ virtual:
     weather1:
         sensors:
 
-            # switchboard_temp_celsius{device="device1",node="weather1"}
+            # laporte_temp_celsius{device="device1",node="weather1"}
             device1_temp_celsius:
                 type: gauge
                 export:
@@ -31,7 +31,7 @@ virtual:
                         # label : field of sensor_id string delimited by '_'
                         "device" : 1 
 
-            # switchboard_temp_celsius{device="device2",node="weather1",type="current"}
+            # laporte_temp_celsius{device="device2",node="weather1",type="current"}
             current_device2_temp_celsius:
                 type: gauge
                 export:
@@ -39,7 +39,7 @@ virtual:
                         "type" : 1
                         "device" : 2
 
-            # switchboard_temp_celsius{device="device2",node="weather1",type="average"}
+            # laporte_temp_celsius{device="device2",node="weather1",type="average"}
             average_device2_temp_celsius:
                 type: gauge
                 export:
