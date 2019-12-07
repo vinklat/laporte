@@ -25,7 +25,7 @@ setuptools.setup(
     version=__version__,
     author="Václav Vinklát",
     author_email="vin@email.cz",
-    description="a gateway for processing metrics with automation and states",
+    description="Push gateway for processing metrics with automation and states",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/vinklat/laporte",
