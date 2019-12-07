@@ -7,8 +7,8 @@ import jinja2
 import logging
 from copy import copy
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
-from switchboard.sensor import Gauge, Counter, Switch, Message
-from switchboard.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
+from laporte.sensor import Gauge, Counter, Switch, Message
+from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -329,7 +329,7 @@ class Sensors():
                                 actuator_id_values[sensor.gw][node_id] = {}
                             actuator_id_values[
                                 sensor.gw][node_id][sensor_id] = sensor.value
-                            if (sensor.node_addr != "") and (sensor.key != ""):
+                            if (sensor.node_addr != '') and (sensor.key != ''):
                                 if sensor.gw not in actuator_addr_values:
                                     actuator_addr_values[sensor.gw] = {}
                                 if sensor.node_addr not in actuator_addr_values[
@@ -436,7 +436,7 @@ class Sensors():
             self.sensors = inner_sensors
 
         def collect(self):
-            EXPORTER_NAME = "switchboard"
+            EXPORTER_NAME = 'laporte'
 
             d = {}
             for sensor in self.sensors.sensor_index:
@@ -447,16 +447,16 @@ class Sensors():
                 ):
                     uniqname = name + '_' + '_'.join(labels)
                     if not uniqname in d:
-                        metric_name = "{}_{}".format(EXPORTER_NAME, name)
+                        metric_name = '{}_{}'.format(EXPORTER_NAME, name)
                         if metric_type == COUNTER:
                             x = CounterMetricFamily(metric_name,
-                                                    "with labels: " +
-                                                    ", ".join(labels),
+                                                    'with labels: ' +
+                                                    ', '.join(labels),
                                                     labels=labels)
                         else:
                             x = GaugeMetricFamily(metric_name,
-                                                  "with labels: " +
-                                                  ", ".join(labels),
+                                                  'with labels: ' +
+                                                  ', '.join(labels),
                                                   labels=labels)
                         d[uniqname] = x
                     else:

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=C0411, C0412, C0413
-'''a Flask application making up the Switchboard http server'''
+'''a Flask application making up the Laporte http server'''
 
 from gevent import monkey
 monkey.patch_all()
@@ -16,9 +16,9 @@ from apscheduler.schedulers.gevent import GeventScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-from switchboard.version import __version__, get_build_info
-from switchboard.argparser import get_pars
-from switchboard.sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
+from laporte.version import __version__, get_build_info
+from laporte.argparser import get_pars
+from laporte.sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
 
 # create logger
 logger = logging.getLogger(__name__)
@@ -103,7 +103,7 @@ class DefaultNamespace(Namespace):
 # create Flask application
 app = Flask(__name__)
 blueprint = Blueprint('api', __name__, url_prefix='/api')
-api = Api(blueprint, doc='/', title='Switchboard API', version=__version__)
+api = Api(blueprint, doc='/', title='Laporte API', version=__version__)
 bootstrap = Bootstrap(app)
 sensors = Sensors()
 app.config.SWAGGER_UI_DOC_EXPANSION = 'list'
@@ -264,7 +264,7 @@ class StateReset(Resource):
 @ns_state.route('/reload')
 class StateReload(Resource):
     def put(self):
-        '''reload switchboard configuration'''
+        '''reload laporte configuration'''
 
         return sensors.reload_config(pars)
 

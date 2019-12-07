@@ -107,7 +107,7 @@ class Sensor(ABC):
     hold = None
 
     def get_data(self, skip_None=False, selected={}):
-        z = {**self.__dict__, **{"type": self.get_type()}}
+        z = {**self.__dict__, **{'type': self.get_type()}}
         for key, value in z.items():
             if (not selected) or (key in selected):
                 if not (value is None and skip_None):
@@ -362,24 +362,24 @@ class Switch(Sensor):
 
     def fix_value(self, value):
         values_map = {
-            "True": True,
-            "true": True,
-            "ON": True,
-            "On": True,
-            "on": True,
-            "OK": True,
-            "Yes": True,
-            "yes": True,
-            "1": True,
-            "False": False,
-            "false": False,
-            "OFF": False,
-            "Off": False,
-            "off": False,
-            "LOW": False,
-            "No": False,
-            "no": False,
-            "0": False
+            'True': True,
+            'true': True,
+            'ON': True,
+            'On': True,
+            'on': True,
+            'OK': True,
+            'Yes': True,
+            'yes': True,
+            '1': True,
+            'False': False,
+            'false': False,
+            'OFF': False,
+            'Off': False,
+            'off': False,
+            'LOW': False,
+            'No': False,
+            'no': False,
+            '0': False
         }
 
         if isinstance(value, str):

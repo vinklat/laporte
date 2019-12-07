@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-'''cmd line argument parser for the Switchboard http server'''
+'''cmd line argument parser for the Laporte http server'''
 
 import logging
 from argparse import ArgumentParser, ArgumentTypeError
-from switchboard.version import __version__, get_build_info
+from laporte.version import __version__, get_build_info
 
 _LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 
@@ -27,14 +27,14 @@ def log_level_string_to_int(arg_string):
 def get_pars():
     '''get parameters from from command line arguments'''
 
-    parser = ArgumentParser(description='Switchboard {}'.format(__version__))
+    parser = ArgumentParser(description='Laporte {}'.format(__version__))
     parser.add_argument('-a',
                         '--address',
                         action='store',
                         dest='addr',
                         help='listen address',
                         type=str,
-                        default="")
+                        default='')
     parser.add_argument('-p',
                         '--port',
                         action='store',
@@ -60,7 +60,7 @@ def get_pars():
                         dest='time_locale',
                         help='time formatting locale (en-US, cs-CZ , ...)',
                         type=str,
-                        default="en-US")
+                        default='en-US')
 
     parser.add_argument('-V',
                         '--version',

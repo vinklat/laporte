@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=E1101, C0103
-'''objects that create a Socket.OI client for Switchboard'''
+'''objects that create a Socket.OI client for Laporte'''
 
 import logging
 import json
@@ -13,13 +13,13 @@ EVENTS_NAMESPACE = '/events'
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
-c_responses_total = Counter('switchboard_responses_total',
+c_responses_total = Counter('laporte_responses_total',
                             'Total count of Socket.IO responses',
                             ['response', 'namespace'])
-c_emits_total = Counter('switchboard_emits_total',
+c_emits_total = Counter('laporte_emits_total',
                         'Total count of Socket.IO emits',
                         ['response', 'namespace'])
-c_connects_total = Counter('switchboard_connects_total',
+c_connects_total = Counter('laporte_connects_total',
                            'Total count of connects/reconnects', ['service'])
 
 
@@ -73,17 +73,17 @@ class MetricsNamespace(socketio.ClientNamespace):
                 self.actuator_addr_handler(gateway, node_addr, keys)
 
     def on_config_response(self, data):
-        '''TODO: receive sensor configuration from switchboard (after room join)'''
+        '''TODO: receive sensor configuration from laporte (after room join)'''
 
         c_responses_total.labels('config_response', METRICS_NAMESPACE).inc()
         self.config_handler(data)
 
     @staticmethod
     def on_status_response(data):
-        '''receive and log status message from switchboard'''
+        '''receive and log status message from laporte'''
 
         c_responses_total.labels('status_response', METRICS_NAMESPACE).inc()
-        logging.info("Switchboard %s namespace status response: %s",
+        logging.info("Laporte %s namespace status response: %s",
                      METRICS_NAMESPACE, data)
 
     def __join_gateways(self):
@@ -130,19 +130,21 @@ class EventsNamespace(socketio.ClientNamespace):
                 dict of sensor_ids with dicts of changed metrics
         '''
 
-        logging.debug("empty default_update_handler for %s with %s chenged metrics", node_id, len(sensors))
+        logging.debug(
+            "empty default_update_handler for %s with %s chenged metrics",
+            node_id, len(sensors))
 
     init_handler = default_init_handler
     update_handler = default_update_handler
 
     def on_init_response(self, data):
-        '''receive update of nodes from switchboard'''
+        '''receive update of nodes from laporte'''
 
         c_responses_total.labels('init_response', EVENTS_NAMESPACE).inc()
         self.init_handler(json.loads(data))
 
     def on_update_response(self, data):
-        '''receive update of nodes from switchboard'''
+        '''receive update of nodes from laporte'''
 
         c_responses_total.labels('update_response', EVENTS_NAMESPACE).inc()
         for node_id, metrics in json.loads(data).items():
@@ -150,10 +152,10 @@ class EventsNamespace(socketio.ClientNamespace):
 
     @staticmethod
     def on_status_response(data):
-        '''receive and log status message from switchboard'''
+        '''receive and log status message from laporte'''
 
         c_responses_total.labels('status_response', EVENTS_NAMESPACE).inc()
-        logging.info("Switchboard %s namespace status response: %s",
+        logging.info("Laporte %s namespace status response: %s",
                      METRICS_NAMESPACE, data)
 
 
@@ -164,21 +166,21 @@ class DefaultNamespace(socketio.ClientNamespace):
     def on_connect():
         '''fired upon a successful connection'''
 
-        logging.info("Switchboard connected OK")
-        c_connects_total.labels('switchboard').inc()
+        logging.info("Laporte connected OK")
+        c_connects_total.labels('laporte').inc()
 
     @staticmethod
     def on_reconnect():
         '''fired upon a successful reconnection'''
 
-        logging.info("Switchboard reconnected OK")
-        c_connects_total.labels('switchboard').inc()
+        logging.info("Laporte reconnected OK")
+        c_connects_total.labels('laporte').inc()
 
     @staticmethod
     def on_disconnect():
         '''fired upon a disconnection'''
 
-        logging.info("Switchboard disconnected")
+        logging.info("Laporte disconnected")
 
     @staticmethod
     def on_error():
@@ -188,31 +190,31 @@ class DefaultNamespace(socketio.ClientNamespace):
 
     @staticmethod
     def on_status_response(data):
-        '''receive and log status message from switchboard'''
+        '''receive and log status message from laporte'''
 
         c_responses_total.labels('status_response', '/').inc()
-        logging.info("Switchboard status response: %s", data)
+        logging.info("Laporte status response: %s", data)
 
     @staticmethod
     def on_reload_response(data):
-        '''receive reload response from switchboard'''
+        '''receive reload response from laporte'''
 
         del data  # Ignored parameter
         c_responses_total.labels('reload_response   ', '/').inc()
-        logging.info("Switchboard was reloaded")
+        logging.info("Laporte was reloaded")
 
 
-class SwitchboardClient():
+class LaporteClient():
     '''Object containing Socket.IO client with registered namespaces.'''
 
     def __init__(self, addr, port, gateways=None, events=False):
         '''
-        Connect to the switchboard server.
+        Connect to the laporte server.
 
             addr (str):
-                Hostname or IP of switchboard server.
+                Hostname or IP of laporte server.
             port (int):
-                 Port of switchboard server.
+                 Port of laporte server.
             gateways (Optional[List[str]]):
                 List of gateways to be joined in. Defaults to None. Register metrics namespece if set.
             events (Optional[bool]):
@@ -244,8 +246,8 @@ class SwitchboardClient():
         self.sio.wait()
 
     def emit(self, response, message, namespace=METRICS_NAMESPACE):
-        '''emit custom response to the Switchboard'''
+        '''emit custom response to the Laporte'''
 
-        logging.info("Switchboard emit: %s %s", response, message)
+        logging.info("Laporte emit: %s %s", response, message)
         c_emits_total.labels(response, namespace).inc()
         self.sio.emit(response, message, namespace=namespace)

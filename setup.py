@@ -9,7 +9,7 @@ except:
     long_description = "README.md not found"
 
 try:
-    exec(open('switchboard/version.py').read())
+    exec(open('laporte/version.py').read())
 except:
     __version__ = 'v.not.found'
 
@@ -21,14 +21,14 @@ except:
 
 
 setuptools.setup(
-    name="switchboard",
+    name="laporte",
     version=__version__,
     author="Václav Vinklát",
     author_email="vin@email.cz",
     description="a gateway for processing metrics with automation and states",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/vinklat/switchboard",
+    url="https://github.com/vinklat/laporte",
     include_package_data=True,
     zip_safe=False,
     packages=setuptools.find_packages(),
@@ -39,5 +39,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     entry_points={
-        'console_scripts': ['switchboard=switchboard.server:run_server'],
+        'console_scripts': ['laporte=laporte.server:run_server'],
     })

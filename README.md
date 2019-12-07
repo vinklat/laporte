@@ -1,4 +1,4 @@
-# Switchboard
+# Laporte
 
 - a gateway for processing metrics with automation and states
 - acceptor for sensors, batch jobs or messages
@@ -7,7 +7,7 @@
  
 ## Schema:
 
-![switchboard schema](doc/switchboard_schema.svg)
+![laporte schema](doc/laporte_schema.svg)
 
 ## Features:
 
@@ -21,9 +21,9 @@
     * exporting data as Prometheus metrics
     * live www status page
  - optional bridges (extensions):
-    * [switchboard-mqtt](https://github.com/vinklat/switchboard-mqtt) to connect a large family of devices using MQTT protocol
-    * switchboard-journal to store all events into database for forensic purposes (not done)
-    * switchboard-panel to invoke and display states using a web page (not done)
+    * [laporte-mqtt](https://github.com/vinklat/laporte-mqtt) to connect a large family of devices using MQTT protocol
+    * laporte-journal to store all events into database for forensic purposes (not done)
+    * laporte-panel to invoke and display states using a web page (not done)
 
 ## Quick HOWTO:
 ### Example 1: a weather station gateway
@@ -36,7 +36,7 @@
 #### a) run the docker image using the built-in example:
 (the content of this config file can be seen here [example_weatherstation.yml](conf/example_weatherstation.yml))
 
-`docker run -p 9128:9128 vinklat/switchboard -c conf/example_weatherstation.yml`
+`docker run -p 9128:9128 vinklat/laporte -c conf/example_weatherstation.yml`
 
 #### b) send metrics from sensor via REST API
 
@@ -53,12 +53,12 @@ you can simulate it using curl:
 
 We have the following scenario:  
 
-![switchboard schema](doc/example_switch1.svg)
+![laporte schema](doc/example_switch1.svg)
 
 - the light is active when at least one switch is turned on
 
 #### a) run docker image:
-`docker run -p 9128:9128 vinklat/switchboard -c conf/example_switch1.yml`
+`docker run -p 9128:9128 vinklat/laporte -c conf/example_switch1.yml`
 
 (the content of this config file can be seen here [example_switch1.yml](conf/example_switch1.yml))
 

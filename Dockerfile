@@ -9,13 +9,13 @@ RUN apk --update add --virtual build-dependencies build-base tzdata \
   && rm -fR /root/.cache
 
 WORKDIR /tmp/x
-COPY switchboard/*py ./switchboard/
-COPY switchboard/templates/*html ./switchboard/templates/
-COPY switchboard/static/js/*js ./switchboard/static/js/
+COPY laporte/*py ./laporte/
+COPY laporte/templates/*html ./laporte/templates/
+COPY laporte/static/js/*js ./laporte/static/js/
 COPY setup.py README.md MANIFEST.in LICENSE requirements.txt ./
 RUN  pip install . 
 
-WORKDIR /switchboard
+WORKDIR /laporte
 COPY conf/*yml ./conf/
 
-ENTRYPOINT [ "switchboard" ]
+ENTRYPOINT [ "laporte" ]
