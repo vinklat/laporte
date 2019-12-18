@@ -83,22 +83,26 @@ class Sensor(ABC):
                 self.export_hidden = parent_export['hidden']
 
             if 'labels' in parent_export:
-                for label, index in parent_export['labels'].items():
-                    if isinstance(index, int):
-                        parts = self.node_id.split('_', index)
-                        self.export_labels[label] = parts[index - 1]
-                        self.export_node_id = parts[index]
+                for label, label_value in parent_export['labels'].items():
+                    if isinstance(label_value, int):
+                        parts = self.node_id.split('_', label_value)
+                        self.export_labels[label] = parts[label_value - 1]
+                        self.export_node_id = parts[label_value]
+                    if isinstance(label_value, str):
+                        self.export_labels[label] = label_value
 
         if isinstance(export, dict):
             if 'hidden' in export:
                 self.export_hidden = export['hidden']
 
             if 'labels' in export:
-                for label, index in export['labels'].items():
-                    if isinstance(index, int):
-                        parts = self.sensor_id.split('_', index)
-                        self.export_labels[label] = parts[index - 1]
-                        self.export_sensor_id = parts[index]
+                for label, label_value in export['labels'].items():
+                    if isinstance(label_value, int):
+                        parts = self.sensor_id.split('_', label_value)
+                        self.export_labels[label] = parts[label_value - 1]
+                        self.export_sensor_id = parts[label_value]
+                    if isinstance(label_value, str):
+                        self.export_labels[label] = label_value
 
     def clone(self, new_node_id):
         '''
