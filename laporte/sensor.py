@@ -4,6 +4,7 @@
 import re
 # import numpy as np
 import logging
+from copy import copy
 from abc import ABC, abstractmethod
 from time import time
 from asteval import Interpreter, make_symbol_table
@@ -66,6 +67,17 @@ class Sensor(ABC):
         self.export_hidden = False
         self.export_labels = {}
 
+        self.set_export(export, parent_export)
+
+    def set_export(self, export, parent_export):
+        '''set export related attributes  - labels and others'''
+
+        # if node is a template
+        if isinstance(self.node_id, int):
+            self.parent_export = parent_export
+            self.export = export
+            return
+
         if isinstance(parent_export, dict):
             if 'hidden' in parent_export:
                 self.export_hidden = parent_export['hidden']
@@ -73,7 +85,7 @@ class Sensor(ABC):
             if 'labels' in parent_export:
                 for label, index in parent_export['labels'].items():
                     if isinstance(index, int):
-                        parts = node_id.split('_', index)
+                        parts = self.node_id.split('_', index)
                         self.export_labels[label] = parts[index - 1]
                         self.export_node_id = parts[index]
 
@@ -84,9 +96,27 @@ class Sensor(ABC):
             if 'labels' in export:
                 for label, index in export['labels'].items():
                     if isinstance(index, int):
-                        parts = sensor_id.split('_', index)
+                        parts = self.sensor_id.split('_', index)
                         self.export_labels[label] = parts[index - 1]
                         self.export_sensor_id = parts[index]
+
+    def clone(self, new_node_id):
+        '''
+        clone sensor with a new node_id
+        reset export attributes if sensor is a templete
+        '''
+
+        ret = copy(self)
+        ret.node_id = new_node_id
+        ret.export_node_id = new_node_id
+
+        # if node is a template
+        if isinstance(self.node_id, int):
+            ret.set_export(ret.export, ret.parent_export)
+            del ret.export
+            del ret.parent_export
+
+        return ret
 
     @abstractmethod
     def get_type(self):

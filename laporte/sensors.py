@@ -5,7 +5,6 @@ import json
 import yaml
 import jinja2
 import logging
-from copy import copy
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 from laporte.sensor import Gauge, Counter, Switch, Message
 from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
@@ -381,6 +380,8 @@ class Sensors():
         changed = 0
 
         for sensor_id in sensor_values_dict:
+
+            # create new node if there is a template
             if (not node_id in self.node_id_index) and (
                     sensor_id in self.sensor_template_index):
                 logging.debug(
@@ -388,8 +389,7 @@ class Sensors():
                 self.node_id_index[node_id] = {}
                 t = self.sensor_template_index[sensor_id]
                 for sx_id, sx in self.node_template_index[t].items():
-                    sensor = copy(sx)
-                    sensor.node_id = node_id
+                    sensor = sx.clone(node_id)
                     self.node_id_index[node_id][sx_id] = sensor
                     self.sensor_index.append(sensor)
 
