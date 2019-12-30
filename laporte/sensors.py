@@ -126,7 +126,7 @@ class Sensors():
 
     def __add_gw(self, gw, gw_config_dict):
         for node_id, node_config_dict in gw_config_dict.items():
-            if type(node_id) == int:
+            if isinstance(node_id, int):
                 self.__add_node(node_id, gw, node_config_dict, template=True)
             else:
                 self.__add_node(node_id, gw, node_config_dict)

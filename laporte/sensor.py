@@ -4,7 +4,7 @@
 import re
 # import numpy as np
 import logging
-from copy import copy
+from copy import deepcopy
 from abc import ABC, abstractmethod
 from time import time
 from asteval import Interpreter, make_symbol_table
@@ -110,7 +110,7 @@ class Sensor(ABC):
         reset export attributes if sensor is a templete
         '''
 
-        ret = copy(self)
+        ret = deepcopy(self)
         ret.node_id = new_node_id
         ret.export_node_id = new_node_id
 

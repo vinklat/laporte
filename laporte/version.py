@@ -4,7 +4,7 @@
 from platform import python_version
 import pkg_resources
 
-__version__ = '0.4.2'
+__version__ = '0.4.3'
 
 
 def get_build_info():
