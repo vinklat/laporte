@@ -27,7 +27,6 @@ virtual:
                 type: switch
                 # max duration of a job (example: backup time window)
                 ttl: 10
-                accept_refresh: true
                 export:
                     hidden: true
 
@@ -35,7 +34,6 @@ virtual:
                 type: switch
                 # max duration of success state (example: backup age)
                 ttl: 20
-                accept_refresh: true
                 export:
                     hidden: true
 

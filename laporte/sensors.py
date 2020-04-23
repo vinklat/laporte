@@ -52,8 +52,8 @@ class Sensors():
         }
 
         for p in [
-                'default_value', 'accept_refresh', 'ttl', 'eval_preserve',
-                'eval_expr', 'eval_require', 'dataset', 'key'
+                'default_value', 'debounce', 'ttl', 'eval_preserve',
+                'eval_expr', 'eval_require', 'reserved', 'key'
         ]:
             if p in sensor_parent_config_dict:
                 #note: only ttl should pass now
@@ -258,7 +258,7 @@ class Sensors():
                     sensor = self.__get_sensor(node_id, sensor_id)
                     value = next(sensor.get_data(selected={metric_name}))[1]
 
-                    if sensor.dataset and not sensor.dataset_ready:
+                    if sensor.debounce_dataset and not sensor.dataset_ready:
                         value = None
 
                     if value is not None:

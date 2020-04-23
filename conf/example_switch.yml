@@ -1,10 +1,10 @@
---- # example:
-# - two on/off switches
-# - turns on the light when at least one switch is turned on
+---
+# - two switches with 20s delay
+# - the light works during the activity of at least one switch
 #
 # you can control the switch by curl (rest api):
-#   curl http://localhost:9128/api/metrics/switch1 -d switch_state=on -X PUT
-#   curl http://localhost:9128/api/metrics/switch1 -d switch_state=off -X PUT
+#   curl http://localhost:9128/api/metrics/switch1 -d "switch_state=on" -X PUT    
+#   curl http://localhost:9128/api/metrics/switch1 -d "switch_state=off" -X PUT    
 #
 # watch status via live page
 #   http://localhost:9128
@@ -15,10 +15,14 @@ virtual:
         sensors:
             switch_state:
                 type: switch
+
+                # after ttl expires, it turns the switch to its default state
+                ttl: 20
     switch2:
         sensors:
             switch_state:
                 type: switch
+                ttl: 20
     light:
         actuators:
             relay_state:

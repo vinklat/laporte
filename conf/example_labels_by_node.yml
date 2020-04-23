@@ -20,7 +20,7 @@
 
 
 virtual:
-    #laporte_temp_celsius{location="outdoor",node="weather"}
+    # laporte_temp_celsius{location="outdoor",node="weather"}
     outdoor_weather:
         export:
             labels: 
@@ -30,7 +30,7 @@ virtual:
             temp_celsius:
                 type: gauge
 
-    #laporte_temp_celsius{location="indoor",node="weather"}
+    # laporte_temp_celsius{location="indoor",node="weather"}
     indoor_weather:
         export:
             labels: 
