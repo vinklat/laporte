@@ -7,7 +7,7 @@ monkey.patch_all()
 import logging
 import json
 from flask import Flask, Blueprint, request, Response, abort, render_template
-from flask_restplus import Api, Resource
+from flask_restx import Api, Resource
 from flask_socketio import SocketIO, Namespace, emit, join_room, rooms
 from flask_bootstrap import Bootstrap
 from geventwebsocket.handler import WebSocketHandler

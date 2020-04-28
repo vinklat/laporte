@@ -1,5 +1,5 @@
 flask
-flask-restplus
+flask-restx
 flask-socketio
 python-socketio[client]
 bootstrap_flask
