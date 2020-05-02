@@ -42,18 +42,28 @@ def get_pars():
                         help='listen port',
                         type=int,
                         default=9128)
-    parser.add_argument('-c',
-                        '--sensor-config',
-                        action='store',
-                        dest='sensors_fname',
-                        help='sensor config yaml file',
-                        type=str,
-                        default='conf/sensors.yml')
+    parser.add_argument(
+        '-c',
+        '--sensor-config',
+        action='store',
+        dest='sensors_fname',
+        help='yaml or yaml+jinja2 file with sensor configuration',
+        type=str,
+        default='conf/sensors.yml')
     parser.add_argument('-j',
                         '--jinja2',
                         action='store_true',
                         dest='jinja2',
-                        help='use jinja2 in sensor config yaml file')
+                        help='use jinja2 in yaml config file')
+    parser.add_argument(
+        '-d',
+        '--sensor-config-dir',
+        action='store',
+        dest='sensors_dir',
+        help=
+        'config directory (required when there are other files included in config)',
+        type=str,
+        default='conf')
     parser.add_argument('-t',
                         '--time-locale',
                         action='store',

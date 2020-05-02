@@ -2,9 +2,9 @@
 '''objects that collect sets of sensors'''
 
 import json
-import yaml
-import jinja2
 import logging
+from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateNotFound
+from yaml import safe_load, YAMLError
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 from laporte.sensor import Gauge, Counter, Binary, Message
 from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, BINARY, MESSAGE
@@ -21,7 +21,6 @@ SETUP = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
 
 class Sensors():
     '''container to store a set of sensors'''
-
     def reset(self):
         self.node_id_index = {}
         self.node_template_index = {}
@@ -505,11 +504,16 @@ class Sensors():
         try:
             with open(pars.sensors_fname, 'r') as stream:
                 if pars.jinja2:
-                    t = jinja2.Template(stream.read())
-                    config_dict = yaml.load(t.render())
+                    # load jinja2
+                    t = Environment(
+                        loader=FileSystemLoader(pars.sensors_dir)).from_string(
+                            stream.read())
+                    # load yaml
+                    config_dict = safe_load(t.render())
                 else:
-                    config_dict = yaml.safe_load(stream)
-        except (yaml.YAMLError, jinja2.exceptions.TemplateSyntaxError,
+                    # load yaml
+                    config_dict = safe_load(stream)
+        except (YAMLError, TemplateSyntaxError, TemplateNotFound,
                 FileNotFoundError) as exc:
             logging.error("Cant't read config: {}".format(exc))
             exit(1)
