@@ -17,12 +17,12 @@ ACTUATOR = 2
 
 GAUGE = 1
 COUNTER = 2
-SWITCH = 3
+BINARY = 3
 MESSAGE = 4
 
 
 class Sensor(ABC):
-    '''abstract base class for Gauge, Counter, Switch and Message class'''
+    '''abstract base class for Gauge, Counter, Binary and Message class'''
 
     # config attributes:
     node_addr = None
@@ -240,7 +240,7 @@ class Sensor(ABC):
             self.count_hit()
 
             if self.ttl is not None:
-                if self.get_type() == SWITCH and value == self.default_value:
+                if self.get_type() == BINARY and value == self.default_value:
                     self.ttl_remaining = None
                 else:
                     self.ttl_remaining = self.ttl
@@ -409,14 +409,14 @@ class Counter(Sensor):
         self.reset()
 
 
-class Switch(Sensor):
-    '''An object that collects state and metadata of the Switch type sensor
-       The switch is a metric that represents a single boolean 
+class Binary(Sensor):
+    '''An object that collects state and metadata of the Binary type sensor
+       The binary is a metric that represents a single boolean 
        value On/Off (True/False).
     '''
 
     def get_type(self):
-        return SWITCH
+        return BINARY
 
     def reset(self):
         self.value = self.default_value

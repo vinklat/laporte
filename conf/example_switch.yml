@@ -1,4 +1,5 @@
 ---
+# Example: example of using a binary sensors
 # - two switches with 20s delay
 # - the light works during the activity of at least one switch
 #
@@ -14,19 +15,19 @@ virtual:
     switch1:
         sensors:
             switch_state:
-                type: switch
+                type: binary
 
                 # after ttl expires, it turns the switch to its default state
                 ttl: 20
     switch2:
         sensors:
             switch_state:
-                type: switch
+                type: binary
                 ttl: 20
     light:
         actuators:
             relay_state:
-                type: switch
+                type: binary
 
                 # this sensor monitors state of other sensors
                 eval_require:

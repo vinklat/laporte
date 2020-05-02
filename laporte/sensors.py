@@ -6,8 +6,8 @@ import yaml
 import jinja2
 import logging
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
-from laporte.sensor import Gauge, Counter, Switch, Message
-from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, SWITCH, MESSAGE
+from laporte.sensor import Gauge, Counter, Binary, Message
+from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, BINARY, MESSAGE
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -78,8 +78,8 @@ class Sensors():
             sensor = Message(**param)
         elif t == 'counter':
             sensor = Counter(**param)
-        elif t == 'switch':
-            sensor = Switch(**param)
+        elif t == 'binary':
+            sensor = Binary(**param)
         else:
             sensor = Gauge(**param)
 
@@ -475,7 +475,7 @@ class Sensors():
 
             if t == GAUGE or t == COUNTER:
                 d[sensor.sensor_id] = (float, 'decimal')
-            elif t == SWITCH:
+            elif t == BINARY:
                 d[sensor.sensor_id] = (bool, 'boolean')
             else:
                 d[sensor.sensor_id] = (str, 'string')

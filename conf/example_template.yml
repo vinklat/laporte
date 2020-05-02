@@ -19,7 +19,7 @@ virtual:
             temp_celsius:
                 type: gauge
             frozen_state:
-                type: switch
+                type: binary
                 eval_require:
                     t : [ temp_celsius, value ]
                 eval_expr: 't < 0'

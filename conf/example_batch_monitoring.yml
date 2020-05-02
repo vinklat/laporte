@@ -1,14 +1,14 @@
 ---
-# - monitoring state of a batch jobs (backups, ....)
+# Example: monitoring state of a batch jobs (backups, ....)
 #
-# - arrange anywhere in your job code notifying of any changes:
+# - notify state/changes in your batch script like this:
 #
 #   curl http://localhost:9128/api/metrics/somejob -d "run_state=on" -X PUT    
 #   curl http://localhost:9128/api/metrics/somejob -d "run_state=off" -X PUT    
 #   curl http://localhost:9128/api/metrics/somejob -d "success_state=on" -X PUT    
 #   curl http://localhost:9128/api/metrics/somejob -d "success_state=off" -X PUT    
 #
-# - you will always have the actual state of a job in job_state metric
+# - you will always have the actual state of a job in job_state gauge metric
 #   state may have one of these 4 states:
 #
 #  0: job is not running, success is expired (hard alert)
@@ -24,14 +24,14 @@ virtual:
     somejob:
         sensors:
             run_state:
-                type: switch
+                type: binary
                 # max duration of a job (example: backup time window)
                 ttl: 10
                 export:
                     hidden: true
 
             success_state:
-                type: switch
+                type: binary
                 # max duration of success state (example: backup age)
                 ttl: 20
                 export:
