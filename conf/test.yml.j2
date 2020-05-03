@@ -1,0 +1,196 @@
+#!/bin/bash
+# {#
+for i in `seq 5`
+do
+    curl http://localhost:9128/api/metrics/a${i}_test -d "run_state=on" -X PUT
+done
+sleep 1
+for i in `seq 5`
+do
+    curl http://localhost:9128/api/metrics/a${i}_test -d "success_state=on" -X PUT
+done
+sleep 4
+curl http://localhost:9128/api/metrics/c1_test -d "switch_state=on" -X PUT
+
+out=`curl http://localhost:9128/metrics -X GET -s | grep 'laporte_switch_state{node="test",stage="final"} 1.0'`
+
+if [ -z "${out}" ]
+then
+    echo "test failed"
+    exit 1
+else
+    echo "test OK"
+    exit 0
+fi
+
+echo $out
+exit
+#}
+
+---
+test:
+    1:
+        export:
+            hidden: true
+            labels:
+                stage: 1
+        sensors:
+            run_state:
+                type: binary
+                ttl: 2
+
+            success_state:
+                type: binary
+                ttl: 2
+
+            int_state:
+                type: gauge
+                eval_require:
+                    c: [ success_state, value ]
+                    d: [ run_state, value ]
+                default_value: 0
+                eval_expr: |
+                    a = True if value == 2 or value == 3 else False
+                    b = True if value == 1 or value == 3 else False
+                    c2 = ((not b) and c and (not d)) or (b and c and d) or (a and (not b) and d) or (a and b and (not d))
+                    d2 = ((not a) and (not c) and d) or ((not a) and b and c) or (a and c and d) or (a and b and (not c))
+                    c2 * 2 + d2
+            result_ratio:
+                type: gauge
+                default_value: 0
+                export:
+                    hidden: false
+                eval_require:
+                    x: [ int_state, value ]
+                eval_expr: "x / 3"
+                
+    b1_test: 
+        export:
+            labels:
+                stage: 1
+        sensors:
+            result_total:
+                type: counter
+                default_value: 0
+                eval_require:
+                    {%- for i in range(1,6) %}
+
+                    a{{ i }}: [ a{{ i }}_test, result_ratio, value ]
+                    {%- endfor %}
+                eval_expr: |
+                    value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
+
+    b2_test: 
+        export:
+            labels:
+                stage: 1
+        sensors:
+            result_total:
+                type: counter
+                default_value: 0
+                debounce:
+                    hits: 4                
+                eval_require:
+                    {%- for i in range(1,6) %}
+
+                    a{{ i }}: [ a{{ i }}_test, result_ratio, value ]
+                    {%- endfor %}
+                eval_expr: |
+                    value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
+
+    b3_test: 
+        export:
+            labels:
+                stage: 1
+        sensors:
+            {%- for i in range(1,6) %}
+
+            result{{ i }}_total:
+                type: counter
+                default_value: 0
+                export:
+                    hidden: true
+                eval_require:
+                    a: [ a{{ i }}_test, result_ratio, value ]
+                eval_expr: |
+                    value + a
+            {%- endfor %}
+
+            result_total:
+                type: counter
+                default_value: 0
+                eval_require:
+                    {%- for i in range(1,6) %}
+
+                    a{{ i }}: [ result{{ i }}_total, value ]
+                    {%- endfor %}
+                eval_expr: |
+                    value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
+
+    b4_test: 
+        export:
+            labels:
+                stage: 1
+        sensors:
+            {%- for i in range(1,6) %}
+
+            result{{ i }}_total:
+                type: counter
+                default_value: 0
+                export:
+                    hidden: true                
+                debounce:
+                    changed: true
+                    dataset: true
+                eval_require:
+                    a: [ a{{ i }}_test, result_ratio, value ]
+                eval_expr: |
+                    value + a
+            {%- endfor %}
+
+            result_total:
+                type: counter
+                default_value: 0
+                eval_require:
+                    {%- for i in range(1,6) %}
+
+                    a{{ i }}: [ result{{ i }}_total, value ]
+                    {%- endfor %}
+                eval_expr: |
+                    value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
+
+    c1_test:
+        export:
+            labels:
+                stage: 1
+        sensors:
+            switch_state:
+                type: binary
+                export:
+                    hidden: true                    
+            result_total:
+                type: gauge
+                default_value: 0
+                debounce:
+                    time: 0.1
+                eval_require:
+                    s: [ switch_state, value ]
+                    {%- for i in range(1,5) %}
+
+                    b{{ i }}: [ b{{ i }}_test, result_total, value ]
+                    {%- endfor %}
+                eval_expr: |
+                    1/3 + {% for i in range(1,5) %} + b{{ i }}{% endfor %}
+
+    test:
+        export:
+            labels:
+                stage: "final"
+        sensors:
+            switch_state:
+                type: binary
+                debounce:
+                    changed: true
+                eval_require:
+                    x: [ c1_test, result_total, value ]
+                eval_expr: "x == 197"

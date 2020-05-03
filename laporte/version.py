@@ -16,8 +16,8 @@ def get_build_info():
         python_version(),
         'flask':
         pkg_resources.get_distribution('flask').version,
-        'flask-restplus':
-        pkg_resources.get_distribution('flask-restplus').version,
+        'flask-restx':
+        pkg_resources.get_distribution('flask-restx').version,
         'flask-socketio':
         pkg_resources.get_distribution('flask-socketio').version,
         'python-socketio':

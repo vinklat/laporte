@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=E1101, C0103
 '''objects that create a Socket.OI client for Laporte'''
 
 import logging
@@ -216,7 +215,8 @@ class LaporteClient():
             port (int):
                  Port of laporte server.
             gateways (Optional[List[str]]):
-                List of gateways to be joined in. Defaults to None. Register metrics namespece if set.
+                List of gateways to be joined in.
+                Defaults to None. Register metrics namespece if set.
             events (Optional[bool]):
                 Register events namespace. Defaults to False.
         '''

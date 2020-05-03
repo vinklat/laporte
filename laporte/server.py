@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=C0411, C0412, C0413
+# pylint: disable=wrong-import-position, wrong-import-order, ungrouped-imports
+# pylint: disable=invalid-name, no-self-use,
+# pylint: disable=missing-function-docstring, missing-class-docstring
 '''a Flask application making up the Laporte http server'''
 
 from gevent import monkey
@@ -40,7 +42,6 @@ else:
 
 class MetricsNamespace(Namespace):
     '''Socket.IO namespace for set/retrieve metrics of sensors'''
-
     @staticmethod
     def on_sensor_response(message):
         '''receive metrics of changed sensors identified by node_id/sensor_id'''
@@ -71,7 +72,7 @@ class MetricsNamespace(Namespace):
     def on_join(message):
         '''fired upon gateway join'''
 
-        logger.debug('SocketIO client join: {} '.format(message))
+        logger.debug("SocketIO client join: %s", message)
         gw = message['room']
         join_room(gw)
         emit('status_response', {'joined in': rooms()})
@@ -80,7 +81,6 @@ class MetricsNamespace(Namespace):
 
 class EventsNamespace(Namespace):
     '''Socket.IO namespace for events emit'''
-
     @staticmethod
     def on_connect():
         '''emit initital event after a successful connection'''
@@ -92,7 +92,6 @@ class EventsNamespace(Namespace):
 
 class DefaultNamespace(Namespace):
     '''Socket.IO namespace for default responses'''
-
     @staticmethod
     def on_connect():
         '''fired upon a successful connection'''
@@ -144,12 +143,11 @@ class NodeMetrics(Resource):
     @api.expect(parser)
     def put(self, node_id):
         '''set sensors of a node'''
-        logger.info("API/set: {}: {}".format(node_id,
-                                             str(request.form.to_dict())))
+        logger.info("API/set: %s: %s", node_id, str(request.form.to_dict()))
         try:
             ret = sensors.set_values(node_id, request.form)
         except KeyError:
-            logger.warning("node {} or sensor not found".format(node_id))
+            logger.warning("node %s or sensor not found", node_id)
             abort(404)  # sensor not configured
 
         return ret
@@ -163,7 +161,7 @@ class NodeMetrics(Resource):
         try:
             ret = dict(sensors.get_metrics_of_node(node_id))
         except KeyError:
-            logger.warning("node {} not found".format(node_id))
+            logger.warning("node %s not found", node_id)
             abort(404)  # sensor not configured
 
         return ret
@@ -177,12 +175,11 @@ class IncNodeMetrics(Resource):
     @api.expect(parser)
     def put(self, node_id):
         '''increment sensor values of a node'''
-        logger.info("API/inc: {}: {}".format(node_id,
-                                             str(request.form.to_dict())))
+        logger.info("API/inc: %s: %s", node_id, str(request.form.to_dict()))
         try:
             ret = sensors.set_values(node_id, request.form, increment=True)
         except KeyError:
-            logger.warning("node {} or sensor not found".format(node_id))
+            logger.warning("node %s or sensor not found", node_id)
             abort(404)  # sensor not configured
 
         return ret
@@ -197,14 +194,16 @@ class SensorMetrics(Resource):
         })
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
-    def get(self, node_id, sensor_id):
+    def get(self, search_node_id, search_sensor_id):
         '''get metrics of one sensor'''
 
         try:
-            ret = dict(sensors.get_metrics_of_sensor(node_id, sensor_id))
+            ret = dict(
+                sensors.get_metrics_of_sensor(search_node_id,
+                                              search_sensor_id))
         except KeyError:
-            logger.warning("node {} or sensor {} not found".format(
-                node_id, sensor_id))
+            logger.warning("node %s or sensor %s not found", search_node_id,
+                           search_sensor_id)
             abort(404)  # sensor not configured
 
         return ret
@@ -349,12 +348,12 @@ scheduler.add_job(func=sensors.update_sensors_ttl,
 
 # start http server
 def run_server():
-    logger.info("http server listen {}:{}".format(pars.addr, pars.port))
-    log = LoggingLogAdapter(logger, level=logging.DEBUG)
+    logger.info("http server listen %s:%s", pars.addr, pars.port)
+    dlog = LoggingLogAdapter(logger, level=logging.DEBUG)
     errlog = LoggingLogAdapter(logger, level=logging.ERROR)
     http_server = WSGIServer((pars.addr, pars.port),
                              app,
-                             log=log,
+                             log=dlog,
                              error_log=errlog,
                              handler_class=WebSocketHandler)
     sensors.load_config(pars)

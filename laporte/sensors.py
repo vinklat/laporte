@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring, missing-class-docstring
 '''objects that collect sets of sensors'''
 
 import json
@@ -7,7 +9,7 @@ from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateN
 from yaml import safe_load, YAMLError
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
 from laporte.sensor import Gauge, Counter, Binary, Message
-from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, BINARY, MESSAGE
+from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, BINARY
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -209,15 +211,21 @@ class Sensors():
             if sensor.gw == gw:
                 yield dict(sensor.get_data(skip_None=True, selected=SETUP))
 
-    def __get_changed_nodes_dict(self, first={}, second={}, level=0):
+    def __get_changed_nodes_dict(self, first=None, second=None, level=0):
         changed = {}
+
+        # because {} is dangerous default value
+        if first is None:
+            first = {}
+        if second is None:
+            second = {}
 
         if level == 0:
             first = self.prev_data
             second = self.get_metrics_dict_by_node(skip_None=False)
 
         for key in first:
-            if (first[key] != second[key]):  #changed
+            if first[key] != second[key]:  #changed
                 if level < 2:
                     changed[key] = self.__get_changed_nodes_dict(
                         first=first[key], second=second[key], level=level + 1)
@@ -225,7 +233,7 @@ class Sensors():
                     changed[key] = second[key]
 
         for key in second:
-            if (not key in first):  #added
+            if not key in first:  #added
                 if level < 2:
                     changed[key] = self.__get_changed_nodes_dict(
                         second=second[key], level=level + 1)
@@ -250,14 +258,15 @@ class Sensors():
                         (sensor_id, metric_name) = tuple(metric_list)
                         node_id = sensor.node_id
                     else:
-                        logging.error('{}.{}: error in eval_require {}'.format(
-                            node_id, sensor_id, sensor.eval_require))
+                        logging.error("%s.%s: error in eval_require %s",
+                                      node_id, sensor_id, sensor.eval_require)
                         return {}
 
-                    sensor = self.__get_sensor(node_id, sensor_id)
-                    value = next(sensor.get_data(selected={metric_name}))[1]
+                    search_sensor = self.__get_sensor(node_id, sensor_id)
+                    value = next(
+                        search_sensor.get_data(selected={metric_name}))[1]
 
-                    if sensor.debounce_dataset and not sensor.dataset_ready:
+                    if search_sensor.debounce_dataset and not search_sensor.dataset_ready:
                         value = None
 
                     if value is not None:
@@ -265,7 +274,10 @@ class Sensors():
                         used_list.append(self.__get_sensor(node_id, sensor_id))
                     else:
                         return {}
-            except:
+            except KeyError:
+                logging.debug(
+                    "skip eval %s.%s: required sensor %s.%s not found",
+                    sensor.node_id, sensor.sensor_id, node_id, sensor_id)
                 return {}
 
         for s in used_list:
@@ -356,8 +368,8 @@ class Sensors():
 
     def conv_addrs_to_ids(self, addrs_dict):
         '''
-        convert {node_addr:{key:value}} dict 
-        to 
+        convert {node_addr:{key:value}} dict
+        to
         {node_id:{sensor_id:value}} dict
         '''
 
@@ -383,8 +395,7 @@ class Sensors():
             # create new node if there is a template
             if (not node_id in self.node_id_index) and (
                     sensor_id in self.sensor_template_index):
-                logging.debug(
-                    "setup new node {} from template.".format(node_id))
+                logging.debug("setup new node %s from template.", node_id)
                 self.node_id_index[node_id] = {}
                 t = self.sensor_template_index[sensor_id]
                 for sx_id, sx in self.node_template_index[t].items():
@@ -418,10 +429,10 @@ class Sensors():
         changed = 0
 
         for sensor in self.sensor_index:
-            if sensor.dec_ttl():
+            if sensor.dec_ttl(interval):
                 changed = 1
-                logging.debug("scheduler: {}.{} ttl timed out".format(
-                    sensor.node_id, sensor.sensor_id))
+                logging.debug("scheduler: %s.%s ttl timed out", sensor.node_id,
+                              sensor.sensor_id)
                 self.__do_requiring_eval(sensor)
                 self.__used_dataset_reset()
 
@@ -515,7 +526,7 @@ class Sensors():
                     config_dict = safe_load(stream)
         except (YAMLError, TemplateSyntaxError, TemplateNotFound,
                 FileNotFoundError) as exc:
-            logging.error("Cant't read config: {}".format(exc))
+            logging.error("Cant't read config: %s", exc)
             exit(1)
 
         self.add_sensors(config_dict)

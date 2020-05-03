@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
+# pylint: disable=missing-function-docstring, missing-class-docstring
 '''objects that collect config and internal states of one sensor'''
 
 import re
-# import numpy as np
 import logging
 from copy import deepcopy
 from abc import ABC, abstractmethod
@@ -60,6 +61,8 @@ class Sensor(ABC):
     duration_seconds = None
     hits_total = None
     debounce_hits_remaining = None
+    parent_export = None
+    export = None
 
     def setup(self, sensor_id, node_addr, key, mode, default_value, debounce,
               ttl, export, parent_export, eval_preserve, eval_expr, reserved,
@@ -82,10 +85,10 @@ class Sensor(ABC):
         self.export_node_id = node_id
         self.export_hidden = False
         self.export_labels = {}
-        self.__set_export(export, parent_export)
+        self.set_export(export, parent_export)
         self.__set_debounce(debounce)
 
-    def __set_export(self, export, parent_export):
+    def set_export(self, export, parent_export):
         '''set export related attributes  - labels and others'''
 
         # if node is a template
@@ -145,7 +148,7 @@ class Sensor(ABC):
 
         # if node is a template
         if isinstance(self.node_id, int):
-            ret.__set_export(ret.export, ret.parent_export)
+            ret.set_export(ret.export, ret.parent_export)
             del ret.export
             del ret.parent_export
 
@@ -158,7 +161,10 @@ class Sensor(ABC):
     def is_actuator(self):
         return self.mode == ACTUATOR
 
-    def get_data(self, skip_None=False, selected={}):
+    def get_data(self, skip_None=False, selected=None):
+        if selected is None:
+            # because {} is dangerous default value
+            selected = {}
         z = {**self.__dict__, **{'type': self.get_type()}}
         for key, value in z.items():
             if (not selected) or (key in selected):
@@ -250,7 +256,10 @@ class Sensor(ABC):
 
         return 1
 
-    def do_eval(self, vars_dict={}, preserve_override=False, update=True):
+    def do_eval(self, vars_dict=None, preserve_override=False, update=True):
+        if vars_dict is None:
+            # because {} is dangerous default value
+            vars_dict = {}
 
         if self.eval_expr is None or (self.eval_preserve
                                       and not preserve_override):
@@ -278,21 +287,16 @@ class Sensor(ABC):
                             err_writer=Devnull(),
                             symtable=syms)
 
-        try:
-            x = aeval.eval(self.eval_expr)
-        except:
-            logging.error("aeval {}".format({self.node_id: self.sensor_id}))
-            return 0
+        result = aeval.eval(self.eval_expr)
 
-        if not x is None:
-            logging.info("eval: {}".format({self.node_id: {
-                self.sensor_id: x
-            }}))
-            return self.set(x, update=update)
+        if not result is None:
+            logging.info("eval: %s", {self.node_id: {self.sensor_id: result}})
+            return self.set(result, update=update)
 
-        logging.debug("can't eval {}.{}".format(self.node_id, self.sensor_id))
+        logging.debug("can't eval %s.%s", self.node_id, self.sensor_id)
         if len(aeval.error) > 0:
-            logging.debug(aeval.error[0].get_error())
+            for err in aeval.error:
+                logging.debug(err.get_error())
 
         return 0
 
@@ -320,9 +324,9 @@ class Sensor(ABC):
 
 class Gauge(Sensor):
     '''An object that collects state and metadata of the Gauge sensor.
-       A gauge is a metric that represents a single numerical value that can arbitrarily go up and down.
+       A gauge is a metric that represents a single numerical value
+       that can arbitrarily go up and down.
     '''
-
     def get_type(self):
         return GAUGE
 
@@ -368,7 +372,6 @@ class Counter(Sensor):
        A counter is a cumulative metric that represents a single monotonically
        increasing counter whose value can only increase or be reset to zero.
     '''
-
     def get_type(self):
         return COUNTER
 
@@ -411,10 +414,9 @@ class Counter(Sensor):
 
 class Binary(Sensor):
     '''An object that collects state and metadata of the Binary type sensor
-       The binary is a metric that represents a single boolean 
+       The binary is a metric that represents a single boolean
        value On/Off (True/False).
     '''
-
     def get_type(self):
         return BINARY
 
@@ -491,7 +493,6 @@ class Message(Sensor):
        This is not a metric but represents a text string that can be displayed
        or parsed to metric.
     '''
-
     def get_type(self):
         return MESSAGE
 
