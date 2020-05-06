@@ -279,6 +279,11 @@ class Sensors():
                     "skip eval %s.%s: required sensor %s.%s not found",
                     sensor.node_id, sensor.sensor_id, node_id, sensor_id)
                 return {}
+            except StopIteration:
+                logging.debug(
+                    "skip eval %s.%s: required metric %s of %s.%s not found",
+                    sensor.node_id, sensor.sensor_id, metric_name, node_id, sensor_id)
+                return {}
 
         for s in used_list:
             s.dataset_use()
