@@ -12,7 +12,7 @@ done
 sleep 4
 curl http://localhost:9128/api/metrics/c1_test -d "switch_state=on" -X PUT
 
-out=`curl http://localhost:9128/metrics -X GET -s | grep 'laporte_switch_state{node="test",stage="final"} 1.0'`
+out=`curl http://localhost:9128/metrics -X GET -s | grep 'test_switch_state{node="test",stage="final"} 1.0'`
 
 if [ -z "${out}" ]
 then
@@ -184,8 +184,9 @@ test:
 
     test:
         export:
+            prefix: "test"
             labels:
-                stage: "final"
+                stage: "final"            
         sensors:
             switch_state:
                 type: binary

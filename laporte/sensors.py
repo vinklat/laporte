@@ -467,11 +467,17 @@ class Sensors():
                 if sensor.export_hidden:
                     continue
 
-                for name, metric_type, value, labels, labels_data in sensor.get_promexport_data(
-                ):
+                for (name, metric_type, value, labels, labels_data,
+                     prefix) in sensor.get_promexport_data():
                     uniqname = name + '_' + '_'.join(labels)
                     if not uniqname in d:
-                        metric_name = '{}_{}'.format(EXPORTER_NAME, name)
+                        if prefix is None:
+                            metric_name = '{}_{}'.format(EXPORTER_NAME, name)
+                        elif prefix == "":
+                            metric_name = name
+                        else:
+                            metric_name = '{}_{}'.format(prefix, name)
+
                         if metric_type == COUNTER:
                             x = CounterMetricFamily(metric_name,
                                                     'with labels: ' +

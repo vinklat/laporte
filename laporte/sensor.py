@@ -40,6 +40,7 @@ class Sensor(ABC):
     export_node_id = None
     export_labels = None
     export_hidden = None
+    export_prefix = None
     eval_require = None
     eval_preserve = None
     eval_expr = None
@@ -101,6 +102,9 @@ class Sensor(ABC):
             if 'hidden' in parent_export:
                 self.export_hidden = parent_export['hidden']
 
+            if 'prefix' in parent_export:
+                self.export_prefix = parent_export['prefix']
+
             if 'labels' in parent_export:
                 for label, label_value in parent_export['labels'].items():
                     if isinstance(label_value, int):
@@ -113,6 +117,9 @@ class Sensor(ABC):
         if isinstance(export, dict):
             if 'hidden' in export:
                 self.export_hidden = export['hidden']
+
+            if 'prefix' in export:
+                self.export_prefix = export['prefix']
 
             if 'labels' in export:
                 for label, label_value in export['labels'].items():
@@ -182,17 +189,17 @@ class Sensor(ABC):
         if self.value is not None:
             yield self.export_sensor_id, t, self.value, ['node'] + labels, [
                 self.export_node_id
-            ] + label_values
+            ] + label_values, self.export_prefix
         if self.hits_total is not None:
             yield 'hits_total', COUNTER, self.hits_total, [
                 'node', 'sensor'
             ] + labels, [self.export_node_id, self.export_sensor_id
-                         ] + label_values
+                         ] + label_values, self.export_prefix
         if self.duration_seconds is not None:
             yield 'duration_seconds', COUNTER, self.duration_seconds, [
                 'node', 'sensor'
             ] + labels, [self.export_node_id, self.export_sensor_id
-                         ] + label_values
+                         ] + label_values, self.export_prefix
 
     @abstractmethod
     def reset(self):
