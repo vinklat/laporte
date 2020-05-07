@@ -7,7 +7,8 @@ import json
 import logging
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateNotFound
 from yaml import safe_load, YAMLError
-from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily
+from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily, InfoMetricFamily
+from laporte.version import __version__
 from laporte.sensor import Gauge, Counter, Binary, Message
 from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, BINARY
 
@@ -282,7 +283,8 @@ class Sensors():
             except StopIteration:
                 logging.debug(
                     "skip eval %s.%s: required metric %s of %s.%s not found",
-                    sensor.node_id, sensor.sensor_id, metric_name, node_id, sensor_id)
+                    sensor.node_id, sensor.sensor_id, metric_name, node_id,
+                    sensor_id)
                 return {}
 
         for s in used_list:
@@ -453,7 +455,14 @@ class Sensors():
         def collect(self):
             EXPORTER_NAME = 'laporte'
 
-            d = {}
+            # add laporte versison at first
+            d = {
+                "0":
+                InfoMetricFamily(EXPORTER_NAME,
+                                 'help',
+                                 value={'version': __version__})
+            }
+
             for sensor in self.sensors.sensor_index:
                 if sensor.export_hidden:
                     continue
