@@ -54,7 +54,6 @@ class Sensor(ABC):
     hits_total = None
     hit_timestamp = None
     duration_seconds = None
-    ttl_remaining = None
     dataset_ready = None
     dataset_used = None
     hold = None
@@ -252,12 +251,6 @@ class Sensor(ABC):
         if update:  # update metadata
             self.count_hit()
 
-            if self.ttl is not None:
-                if self.get_type() == BINARY and value == self.default_value:
-                    self.ttl_remaining = None
-                else:
-                    self.ttl_remaining = self.ttl
-
             if self.debounce_dataset:
                 self.dataset_ready = True
 
@@ -286,7 +279,7 @@ class Sensor(ABC):
                 self.get_data(
                     selected={
                         'value', 'prev_value', 'hits_total', 'hit_timestamp',
-                        'duration_seconds', 'ttl_remaining'
+                        'duration_seconds'
                     })),
             re=re)
 
@@ -316,15 +309,6 @@ class Sensor(ABC):
             self.dataset_ready = False
             self.dataset_used = False
 
-    def dec_ttl(self, interval=1):
-        if self.ttl_remaining is not None:
-            if self.ttl_remaining > 0:
-                self.ttl_remaining -= interval
-                return 0
-            self.reset()  # else
-            return 1
-        return 0
-
     def set_hold(self, release=False):
         self.hold = not release
 
@@ -339,7 +323,6 @@ class Gauge(Sensor):
 
     def reset(self):
         self.value = self.default_value
-        self.ttl_remaining = None
         self.dataset_ready = False
         self.dataset_used = False
         self.debounce_hits_remaining = 0
@@ -384,7 +367,6 @@ class Counter(Sensor):
 
     def reset(self):
         self.value = self.default_value
-        self.ttl_remaining = None
         self.dataset_ready = False
         self.dataset_used = False
         self.debounce_hits_remaining = 0
@@ -430,7 +412,6 @@ class Binary(Sensor):
     def reset(self):
         self.value = self.default_value
         self.count_hit()
-        self.ttl_remaining = None
         self.dataset_ready = False
         self.dataset_used = False
         self.debounce_hits_remaining = 0
@@ -488,7 +469,6 @@ class Binary(Sensor):
 
         self.value = self.default_value
         self.prev_value = self.default_value
-        self.ttl_remaining = None
         self.dataset_ready = False
         self.dataset_used = False
         self.debounce_hits_remaining = 0
@@ -505,7 +485,6 @@ class Message(Sensor):
 
     def reset(self):
         self.value = self.default_value
-        self.ttl_remaining = None
         self.dataset_ready = False
         self.dataset_used = False
         self.debounce_hits_remaining = 0

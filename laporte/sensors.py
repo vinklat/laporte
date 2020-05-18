@@ -5,9 +5,11 @@
 
 import json
 import logging
+from datetime import datetime, timedelta
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateNotFound
 from yaml import safe_load, YAMLError
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily, InfoMetricFamily
+from apscheduler.triggers.date import DateTrigger
 from laporte.version import __version__
 from laporte.sensor import Gauge, Counter, Binary, Message
 from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, BINARY
@@ -33,6 +35,7 @@ class Sensors():
     def __init__(self):
         self.reset()
         self.sio = None
+        self.scheduler = None
         self.prev_data = {}
 
     def __add_sensor(self,
@@ -322,40 +325,82 @@ class Sensors():
             if s.dataset_used:
                 s.dataset_reset()
 
-    def emit_changes(self, diff):
-        ''' emit sensor data of chaged nodes to SocketIO event log namespace'''
+    def sensor_expire(self, sensor):
+        '''
+        called from scheduler job when TTL expires
+        '''
+
+        logging.info("scheduller job: %s.%s TTL expired", sensor.node_id,
+                     sensor.sensor_id)
+
+        sensor.reset()
+        self.__do_requiring_eval(sensor)
+        self.__used_dataset_reset()
+        changes = self.__get_changed_nodes_dict()
+        self.final_changes_processing(changes)
+
+    def final_changes_processing(self, diff):
+        '''
+        schedule remaining TTLs
+        final emit of changes to SocketIO
+          - changed data of sensors to 'events' namespace
+          - changed data for actuators to 'metrics' namespace
+        '''
 
         actuator_id_values = {}
         actuator_addr_values = {}
 
-        if diff and self.sio is not None:
-            for node_id in diff:
-                logging.info('complete sensor changes: %s',
-                             {node_id: diff[node_id]})
-                self.sio.emit('update_response',
-                              json.dumps({node_id: diff[node_id]}),
-                              namespace=EVENTS_NAMESPACE)
+        if isinstance(diff, dict):
+            if diff:
+                logging.info('final changes: %s', diff)
+            else:
+                logging.info('there are no changes')
+                return 0
+        else:
+            return 1
 
-                for sensor_id, metrics in diff[node_id].items():
-                    sensor = self.__get_sensor(node_id, sensor_id)
-                    for metric in metrics:
-                        if sensor.mode == ACTUATOR and metric == 'value':
-                            if sensor.gw not in actuator_id_values:
-                                actuator_id_values[sensor.gw] = {}
-                            if node_id not in actuator_id_values[sensor.gw]:
-                                actuator_id_values[sensor.gw][node_id] = {}
-                            actuator_id_values[
-                                sensor.gw][node_id][sensor_id] = sensor.value
-                            if (sensor.node_addr != '') and (sensor.key != ''):
-                                if sensor.gw not in actuator_addr_values:
-                                    actuator_addr_values[sensor.gw] = {}
-                                if sensor.node_addr not in actuator_addr_values[
-                                        sensor.gw]:
-                                    actuator_addr_values[sensor.gw][
-                                        sensor.node_addr] = {}
+        for node_id in diff:
+            for sensor_id, metrics in diff[node_id].items():
+                sensor = self.__get_sensor(node_id, sensor_id)
+
+                if sensor.get_type(
+                ) == BINARY and sensor.value == sensor.default_value:
+                    continue
+
+                if isinstance(sensor.ttl, int) and isinstance(
+                        sensor.hit_timestamp, float):
+                    logging.debug("schedule TTL expiry: %s.%s", node_id,
+                                  sensor_id)
+                    ttl_time = datetime.fromtimestamp(
+                        sensor.hit_timestamp) + timedelta(seconds=sensor.ttl)
+                    self.scheduler.add_job(
+                        func=self.sensor_expire,
+                        trigger=DateTrigger(run_date=ttl_time),
+                        id='ttl_{}.{}'.format(node_id, sensor_id),
+                        args=[sensor],
+                        replace_existing=True)
+
+                for metric in metrics:
+                    if sensor.mode == ACTUATOR and metric == 'value':
+                        if sensor.gw not in actuator_id_values:
+                            actuator_id_values[sensor.gw] = {}
+                        if node_id not in actuator_id_values[sensor.gw]:
+                            actuator_id_values[sensor.gw][node_id] = {}
+                        actuator_id_values[
+                            sensor.gw][node_id][sensor_id] = sensor.value
+                        if (sensor.node_addr != '') and (sensor.key != ''):
+                            if sensor.gw not in actuator_addr_values:
+                                actuator_addr_values[sensor.gw] = {}
+                            if sensor.node_addr not in actuator_addr_values[
+                                    sensor.gw]:
                                 actuator_addr_values[sensor.gw][
-                                    sensor.node_addr][
-                                        sensor.key] = sensor.value
+                                    sensor.node_addr] = {}
+                            actuator_addr_values[sensor.gw][sensor.node_addr][
+                                sensor.key] = sensor.value
+
+        self.sio.emit('update_response',
+                      json.dumps(diff),
+                      namespace=EVENTS_NAMESPACE)
 
         if actuator_id_values:
             for gateway, data in actuator_id_values.items():
@@ -372,6 +417,8 @@ class Sensors():
                               json.dumps({gateway: data}),
                               room=gateway,
                               namespace=METRICS_NAMESPACE)
+
+        return 0
 
     def conv_addrs_to_ids(self, addrs_dict):
         '''
@@ -426,27 +473,9 @@ class Sensors():
         changes = {}
         if changed:
             changes = self.__get_changed_nodes_dict()
-            self.emit_changes(changes)
+            self.final_changes_processing(changes)
 
         return changes
-
-    def update_sensors_ttl(self, interval=1):
-        '''decrease remaining active ttls for sensors of all nodes (called from scheduller)'''
-
-        changed = 0
-
-        for sensor in self.sensor_index:
-            if sensor.dec_ttl(interval):
-                changed = 1
-                logging.debug("scheduler: %s.%s ttl timed out", sensor.node_id,
-                              sensor.sensor_id)
-                self.__do_requiring_eval(sensor)
-                self.__used_dataset_reset()
-
-        changes = {}
-        if changed:
-            changes = self.__get_changed_nodes_dict()
-            self.emit_changes(changes)
 
     class CustomCollector(object):
         def __init__(self, inner_sensors):
@@ -518,7 +547,7 @@ class Sensors():
             sensor.reset()
 
         changes = self.__get_changed_nodes_dict()
-        self.emit_changes(changes)
+        self.final_changes_processing(changes)
 
         return changes
 
@@ -527,7 +556,7 @@ class Sensors():
             sensor.__init__()
 
         changes = self.__get_changed_nodes_dict()
-        self.emit_changes(changes)
+        self.final_changes_processing(changes)
 
         return changes
 
@@ -557,6 +586,6 @@ class Sensors():
         self.default_values()
         self.reset()
         changes = self.load_config(pars)
-        self.emit_changes(changes)
+        self.final_changes_processing(changes)
         self.sio.emit('reload_response')
         return changes

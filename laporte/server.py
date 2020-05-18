@@ -15,7 +15,6 @@ from flask_bootstrap import Bootstrap
 from geventwebsocket.handler import WebSocketHandler
 from gevent.pywsgi import WSGIServer, LoggingLogAdapter
 from apscheduler.schedulers.gevent import GeventScheduler
-from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from laporte.version import __version__, get_build_info
@@ -113,6 +112,7 @@ sio.on_namespace(DefaultNamespace('/'))
 sio.on_namespace(MetricsNamespace(METRICS_NAMESPACE))
 sio.on_namespace(EventsNamespace(EVENTS_NAMESPACE))
 sensors.sio = sio
+sensors.scheduler = GeventScheduler()
 
 # REST API methods
 
@@ -336,16 +336,6 @@ def metrics():
     return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
 
 
-# start scheduler
-scheduler = GeventScheduler()
-scheduler.start()
-scheduler.add_job(func=sensors.update_sensors_ttl,
-                  trigger=IntervalTrigger(seconds=1),
-                  id='ttl_job',
-                  name='update ttl counters every second',
-                  replace_existing=True)
-
-
 # start http server
 def run_server():
     logger.info("http server listen %s:%s", pars.addr, pars.port)
@@ -357,4 +347,5 @@ def run_server():
                              error_log=errlog,
                              handler_class=WebSocketHandler)
     sensors.load_config(pars)
+    sensors.scheduler.start()
     http_server.serve_forever()
