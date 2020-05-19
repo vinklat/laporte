@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring, missing-class-docstring
 '''objects that collect sets of sensors'''
 
-import json
 import logging
+import json
 from datetime import datetime, timedelta
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateNotFound
 from yaml import safe_load, YAMLError
@@ -477,7 +475,7 @@ class Sensors():
 
         return changes
 
-    class CustomCollector(object):
+    class CustomCollector():
         def __init__(self, inner_sensors):
             self.sensors = inner_sensors
 
@@ -532,7 +530,7 @@ class Sensors():
         for sensor in self.sensor_index:
             t = sensor.get_type()
 
-            if t == GAUGE or t == COUNTER:
+            if t in (GAUGE, COUNTER):
                 d[sensor.sensor_id] = (float, 'decimal')
             elif t == BINARY:
                 d[sensor.sensor_id] = (bool, 'boolean')
@@ -560,6 +558,11 @@ class Sensors():
 
         return changes
 
+    class ConfigException(Exception):
+        def __init__(self, message):
+            Exception.__init__(self, message)
+            self.message = message
+
     def load_config(self, pars):
         try:
             with open(pars.sensors_fname, 'r') as stream:
@@ -575,8 +578,7 @@ class Sensors():
                     config_dict = safe_load(stream)
         except (YAMLError, TemplateSyntaxError, TemplateNotFound,
                 FileNotFoundError) as exc:
-            logging.error("Cant't read config: %s", exc)
-            exit(1)
+            raise self.ConfigException("Cant't read config - {}".format(exc))
 
         self.add_sensors(config_dict)
         changes = self.__get_changed_nodes_dict()

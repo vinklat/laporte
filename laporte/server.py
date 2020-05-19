@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=wrong-import-position, wrong-import-order, ungrouped-imports
-# pylint: disable=invalid-name, no-self-use,
-# pylint: disable=missing-function-docstring, missing-class-docstring
-'''a Flask application making up the Laporte http server'''
+'''a Flask application making up the Laporte'''
 
+# pylint: disable=wrong-import-position, wrong-import-order, ungrouped-imports
 from gevent import monkey
 monkey.patch_all()
 import logging
@@ -338,14 +336,18 @@ def metrics():
 
 # start http server
 def run_server():
-    logger.info("http server listen %s:%s", pars.addr, pars.port)
-    dlog = LoggingLogAdapter(logger, level=logging.DEBUG)
-    errlog = LoggingLogAdapter(logger, level=logging.ERROR)
-    http_server = WSGIServer((pars.addr, pars.port),
-                             app,
-                             log=dlog,
-                             error_log=errlog,
-                             handler_class=WebSocketHandler)
-    sensors.load_config(pars)
-    sensors.scheduler.start()
-    http_server.serve_forever()
+    try:
+        sensors.load_config(pars)
+    except sensors.ConfigException as exc:
+        logger.error(exc)
+    else:
+        logger.info("HTTP server listen %s:%s", pars.addr, pars.port)
+        dlog = LoggingLogAdapter(logger, level=logging.DEBUG)
+        errlog = LoggingLogAdapter(logger, level=logging.ERROR)
+        http_server = WSGIServer((pars.addr, pars.port),
+                                 app,
+                                 log=dlog,
+                                 error_log=errlog,
+                                 handler_class=WebSocketHandler)
+        sensors.scheduler.start()
+        http_server.serve_forever()

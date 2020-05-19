@@ -1,22 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import setuptools
+from laporte.version import __version__
 
 try:
     with open("README.md", "r") as fh:
         long_description = fh.read()
-except:
+except FileNotFoundError:
     long_description = "README.md not found"
-
-try:
-    exec(open('laporte/version.py').read())
-except:
-    __version__ = 'v.not.found'
 
 try:
     with open('requirements.txt') as fh:
         required = fh.read().splitlines()
-except:
+except FileNotFoundError:
     required = []
 
 setuptools.setup(

@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=invalid-name
-# pylint: disable=missing-function-docstring, missing-class-docstring
 '''objects that collect config and internal states of one sensor'''
 
-import re
 import logging
+import re
 from copy import deepcopy
 from abc import ABC, abstractmethod
 from time import time
@@ -268,7 +266,7 @@ class Sensor(ABC):
         if self.eval_require is not None and not vars_dict:
             return 0
 
-        class Devnull(object):
+        class Devnull():
             def write(self, *_):
                 pass
 
