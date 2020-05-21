@@ -82,9 +82,10 @@ class EventsNamespace(Namespace):
     def on_connect():
         '''emit initital event after a successful connection'''
 
-        emit('init_response',
-             json.dumps(sensors.get_metrics_dict_by_node(skip_None=False)),
-             namespace=EVENTS_NAMESPACE)
+        metrics_dict = sensors.get_metrics_dict_by_node(skip_None=False)
+        data = sensors.insert_scheduler_jobs(metrics_dict=metrics_dict)
+
+        emit('init_response', json.dumps(data), namespace=EVENTS_NAMESPACE)
 
 
 class DefaultNamespace(Namespace):
@@ -310,12 +311,18 @@ def table():
                            data=sensors.get_sensors_dump_dict())
 
 
+@app.route('/scheduler')
+def scheduler():
+    return render_template('scheduler.html',
+                           time_locale=pars.time_locale,
+                           async_mode=sio.async_mode)
+
+
 @app.route('/log')
 def log():
     return render_template('log.html',
                            time_locale=pars.time_locale,
-                           async_mode=sio.async_mode,
-                           data=sensors.get_sensors_dump_dict())
+                           async_mode=sio.async_mode)
 
 
 @app.route('/doc')

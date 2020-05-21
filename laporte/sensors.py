@@ -323,21 +323,44 @@ class Sensors():
             if s.dataset_used:
                 s.dataset_reset()
 
+    def insert_scheduler_jobs(self, metrics_dict=None):
+        '''
+        add next run timestamps from scheduler to metrics
+        '''
+
+        if not isinstance(metrics_dict, dict):
+            metrics_dict = {}
+
+        for job in self.scheduler.get_jobs():
+            logging.debug(job.id)
+
+            (action, node_id, sensor_id) = job.id.split('-')
+
+            if node_id not in metrics_dict:
+                metrics_dict[node_id] = {}
+            if sensor_id not in metrics_dict[node_id]:
+                metrics_dict[node_id][sensor_id] = {}
+
+            metrics_dict[node_id][sensor_id]['{}_timestamp'.format(
+                action)] = datetime.timestamp(job.next_run_time)
+
+        return metrics_dict
+
     def sensor_expire(self, sensor):
         '''
         called from scheduler job when TTL expires
         '''
 
-        logging.info("scheduller job: %s.%s TTL expired", sensor.node_id,
+        logging.info("scheduller run: %s.%s TTL expired", sensor.node_id,
                      sensor.sensor_id)
 
         sensor.reset()
         self.__do_requiring_eval(sensor)
         self.__used_dataset_reset()
         changes = self.__get_changed_nodes_dict()
-        self.final_changes_processing(changes)
+        self.final_changes_processing(changes, after_expire=True)
 
-    def final_changes_processing(self, diff):
+    def final_changes_processing(self, diff, after_expire=False):
         '''
         schedule remaining TTLs
         final emit of changes to SocketIO
@@ -349,34 +372,33 @@ class Sensors():
         actuator_addr_values = {}
 
         if isinstance(diff, dict):
-            if diff:
-                logging.info('final changes: %s', diff)
-            else:
+            if not diff:
                 logging.info('there are no changes')
                 return 0
         else:
-            return 1
+            raise TypeError("not a dict")
 
         for node_id in diff:
             for sensor_id, metrics in diff[node_id].items():
                 sensor = self.__get_sensor(node_id, sensor_id)
 
-                if sensor.get_type(
-                ) == BINARY and sensor.value == sensor.default_value:
-                    continue
-
                 if isinstance(sensor.ttl, int) and isinstance(
                         sensor.hit_timestamp, float):
-                    logging.debug("schedule TTL expiry: %s.%s", node_id,
-                                  sensor_id)
-                    ttl_time = datetime.fromtimestamp(
-                        sensor.hit_timestamp) + timedelta(seconds=sensor.ttl)
-                    self.scheduler.add_job(
-                        func=self.sensor_expire,
-                        trigger=DateTrigger(run_date=ttl_time),
-                        id='ttl_{}.{}'.format(node_id, sensor_id),
-                        args=[sensor],
-                        replace_existing=True)
+                    if not after_expire:
+                        ttl_time = datetime.fromtimestamp(
+                            sensor.hit_timestamp) + timedelta(
+                                seconds=sensor.ttl)
+                        job = self.scheduler.add_job(
+                            func=self.sensor_expire,
+                            trigger=DateTrigger(run_date=ttl_time),
+                            id='exp-{}-{}'.format(node_id, sensor_id),
+                            args=[sensor],
+                            replace_existing=True)
+                        diff[node_id][sensor_id][
+                            'exp_timestamp'] = datetime.timestamp(
+                                job.next_run_time)
+                    else:
+                        diff[node_id][sensor_id]['exp_timestamp'] = None
 
                 for metric in metrics:
                     if sensor.mode == ACTUATOR and metric == 'value':
@@ -396,6 +418,7 @@ class Sensors():
                             actuator_addr_values[sensor.gw][sensor.node_addr][
                                 sensor.key] = sensor.value
 
+        logging.info('final changes: %s', diff)
         self.sio.emit('update_response',
                       json.dumps(diff),
                       namespace=EVENTS_NAMESPACE)

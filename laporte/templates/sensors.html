@@ -38,7 +38,6 @@
   </div>
 
 <script type="text/javascript" charset="utf-8">
-    var sensors = {{ sensors | safe | replace ('None','null') | replace ('True','true') | replace ('False','false')}};
     time_locale = "{{ time_locale }}";
 </script>
 {% endblock %}
