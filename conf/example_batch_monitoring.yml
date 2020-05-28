@@ -41,10 +41,11 @@ virtual:
             # variant 1: using logic operators
             job_state:
                 type: gauge
+                default:
+                    value: 0
                 eval_require:
                     c: [ success_state, value ]
                     d: [ run_state, value ]
-                default_value: 0
                 eval_expr: |
                     a = True if value == 2 or value == 3 else False
                     b = True if value == 1 or value == 3 else False
@@ -55,10 +56,11 @@ virtual:
             # variant 2: algorithm using ifs (some result as variant 1)
             job_state2:
                 type: gauge
+                default:
+                    value: 0
                 eval_require:
                     s: [ success_state, value ]
                     r: [ run_state, value ]
-                default_value: 0
                 eval_expr: |
                     S = value
                     if S==0:

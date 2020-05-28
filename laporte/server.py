@@ -5,6 +5,7 @@
 from gevent import monkey
 monkey.patch_all()
 import logging
+import sys
 import json
 from flask import Flask, Blueprint, request, Response, abort, render_template
 from flask_restx import Api, Resource
@@ -48,7 +49,7 @@ class MetricsNamespace(Namespace):
             logger.info('SocketIO message: node_id=%s: data=%s', node_id,
                         str(request_form))
             try:
-                sensors.set_values(node_id, request_form)
+                sensors.set_node_values(node_id, request_form)
             except KeyError:
                 pass
 
@@ -61,7 +62,7 @@ class MetricsNamespace(Namespace):
             logger.info('SocketIO translated message: node_id=%s: data=%s',
                         node_id, str(request_form))
             try:
-                sensors.set_values(node_id, request_form)
+                sensors.set_node_values(node_id, request_form)
             except KeyError:
                 pass
 
@@ -82,8 +83,7 @@ class EventsNamespace(Namespace):
     def on_connect():
         '''emit initital event after a successful connection'''
 
-        metrics_dict = sensors.get_metrics_dict_by_node(skip_None=False)
-        data = sensors.insert_scheduler_jobs(metrics_dict=metrics_dict)
+        data = sensors.get_metrics_dict_by_node(skip_None=False)
 
         emit('init_response', json.dumps(data), namespace=EVENTS_NAMESPACE)
 
@@ -144,7 +144,7 @@ class NodeMetrics(Resource):
         '''set sensors of a node'''
         logger.info("API/set: %s: %s", node_id, str(request.form.to_dict()))
         try:
-            ret = sensors.set_values(node_id, request.form)
+            ret = sensors.set_node_values(node_id, request.form)
         except KeyError:
             logger.warning("node %s or sensor not found", node_id)
             abort(404)  # sensor not configured
@@ -176,7 +176,9 @@ class IncNodeMetrics(Resource):
         '''increment sensor values of a node'''
         logger.info("API/inc: %s: %s", node_id, str(request.form.to_dict()))
         try:
-            ret = sensors.set_values(node_id, request.form, increment=True)
+            ret = sensors.set_node_values(node_id,
+                                          request.form,
+                                          increment=True)
         except KeyError:
             logger.warning("node %s or sensor not found", node_id)
             abort(404)  # sensor not configured
@@ -343,18 +345,19 @@ def metrics():
 
 # start http server
 def run_server():
+    sensors.scheduler.start()
     try:
         sensors.load_config(pars)
     except sensors.ConfigException as exc:
         logger.error(exc)
-    else:
-        logger.info("HTTP server listen %s:%s", pars.addr, pars.port)
-        dlog = LoggingLogAdapter(logger, level=logging.DEBUG)
-        errlog = LoggingLogAdapter(logger, level=logging.ERROR)
-        http_server = WSGIServer((pars.addr, pars.port),
-                                 app,
-                                 log=dlog,
-                                 error_log=errlog,
-                                 handler_class=WebSocketHandler)
-        sensors.scheduler.start()
-        http_server.serve_forever()
+        sys.exit(1)
+
+    logger.info("HTTP server listen %s:%s", pars.addr, pars.port)
+    dlog = LoggingLogAdapter(logger, level=logging.DEBUG)
+    errlog = LoggingLogAdapter(logger, level=logging.ERROR)
+    http_server = WSGIServer((pars.addr, pars.port),
+                             app,
+                             log=dlog,
+                             error_log=errlog,
+                             handler_class=WebSocketHandler)
+    http_server.serve_forever()

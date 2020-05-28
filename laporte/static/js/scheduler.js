@@ -37,10 +37,16 @@ function fill_jobs(msg) {
                         if (metric == "exp_timestamp") {
                             jobs[sensor_label + "-expire"] = value;
                         }
+                        if (metric == "cron_timestamp") {
+                            jobs[sensor_label + "-cron"] = value;
+                        }
                         break;
                     case "object":
                         if (metric == "exp_timestamp") {
                             delete jobs[sensor_label + "-expire"];
+                        }
+                        if (metric == "cron_timestamp") {
+                            delete jobs[sensor_label + "-cron"];
                         }
                         break;
                     default:

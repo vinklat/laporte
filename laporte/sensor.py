@@ -6,7 +6,9 @@ import re
 from copy import deepcopy
 from abc import ABC, abstractmethod
 from time import time
+from datetime import datetime
 from asteval import Interpreter, make_symbol_table
+from apscheduler.job import Job
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -29,6 +31,7 @@ class Sensor(ABC):
     sensor_id = None
     mode = None
     default_value = None
+    default_return_ttl = None
     debounce_changed = None
     debounce_time = None
     debounce_hits = None
@@ -42,7 +45,8 @@ class Sensor(ABC):
     eval_require = None
     eval_preserve = None
     eval_expr = None
-    reserved = None  # for future use
+    eval_skip_ttl = None
+    cron = None
     node_id = None
     gw = None
 
@@ -61,9 +65,11 @@ class Sensor(ABC):
     debounce_hits_remaining = None
     parent_export = None
     export = None
+    ttl_job = None
+    cron_jobs = None
 
-    def setup(self, sensor_id, node_addr, key, mode, default_value, debounce,
-              ttl, export, parent_export, eval_preserve, eval_expr, reserved,
+    def setup(self, sensor_id, node_addr, key, mode, default, debounce, ttl,
+              export, parent_export, eval_preserve, eval_expr, cron,
               eval_require, node_id, gw):
         '''assign values to the data members of the class'''
 
@@ -71,11 +77,10 @@ class Sensor(ABC):
         self.key = key
         self.sensor_id = sensor_id
         self.mode = mode
-        self.default_value = default_value
         self.ttl = ttl
         self.eval_preserve = eval_preserve
         self.eval_expr = eval_expr
-        self.reserved = reserved  # for future use
+        self.cron = cron
         self.eval_require = eval_require
         self.node_id = node_id
         self.gw = gw
@@ -84,6 +89,7 @@ class Sensor(ABC):
         self.export_hidden = False
         self.export_labels = {}
         self.set_export(export, parent_export)
+        self.__set_default(default)
         self.__set_debounce(debounce)
 
     def set_export(self, export, parent_export):
@@ -140,6 +146,23 @@ class Sensor(ABC):
             if 'dataset' in debounce:
                 self.debounce_dataset = debounce['dataset']
 
+    def __set_default(self, default):
+        '''set default config related attributes'''
+
+        if isinstance(default, dict):
+            if 'value' in default:
+                self.default_value = default['value']
+            if 'default_return_ttl' in default:
+                self.default_return_ttl = default['default_return_ttl']
+            if 'skip_ttl' in default:
+                self.eval_skip_ttl = default['skip_ttl']
+
+    def __set_eval(self, evalset):
+        # TODO move eval_expr and eval_require here
+
+        if 'skip_ttl' in evalset:
+            self.eval_skip_ttl = evalset['skip_ttl']
+
     def clone(self, new_node_id):
         '''
         clone sensor with a new node_id
@@ -172,6 +195,26 @@ class Sensor(ABC):
         z = {**self.__dict__, **{'type': self.get_type()}}
         for key, value in z.items():
             if (not selected) or (key in selected):
+                if key == 'cron_jobs':
+                    next_ts = None
+                    if isinstance(value, list):
+                        for item in value:
+                            if isinstance(item, Job) and hasattr(
+                                    item, 'next_run_time'):
+                                ts = datetime.timestamp(item.next_run_time)
+                                if not isinstance(next_ts, float):
+                                    next_ts = ts
+                                elif ts < next_ts:
+                                    next_ts = ts
+                    key = 'cron_timestamp'
+                    value = next_ts
+                if key == 'ttl_job':
+                    next_ts = None
+                    if isinstance(value, Job) and hasattr(
+                            value, 'next_run_time'):
+                        next_ts = datetime.timestamp(value.next_run_time)
+                    key = 'exp_timestamp'
+                    value = next_ts
                 if not (value is None and skip_None):
                     yield key, value
 
@@ -198,6 +241,22 @@ class Sensor(ABC):
             ] + labels, [self.export_node_id, self.export_sensor_id
                          ] + label_values, self.export_prefix
 
+    def sensor_reset(self):
+        changed = False
+        if self.value != self.default_value:
+            self.value = self.default_value
+            changed = True
+
+        self.dataset_ready = False
+        self.dataset_used = False
+        self.debounce_hits_remaining = 0
+        if isinstance(self.ttl_job, Job):
+            logging.debug("scheduler: remove TTL job for %s.%s", self.node_id,
+                          self.sensor_id)
+            self.ttl_job.remove()
+            self.ttl_job = None
+        return changed
+
     @abstractmethod
     def reset(self):
         pass
@@ -220,19 +279,19 @@ class Sensor(ABC):
     def set(self, value, update=True, increment=False):
 
         if self.hold:
-            return 0
+            return False
 
         if value == self.value and self.debounce_changed:
-            return 0
+            return False
 
         if self.debounce_time and isinstance(self.hit_timestamp, float):
             timestamp = time()
             if timestamp < self.hit_timestamp + self.debounce_time:
-                return 0
+                return False
 
         if self.debounce_hits_remaining:
             self.debounce_hits_remaining -= 1
-            return 0
+            return False
 
         self.debounce_hits_remaining = self.debounce_hits
 
@@ -252,7 +311,12 @@ class Sensor(ABC):
             if self.debounce_dataset:
                 self.dataset_ready = True
 
-        return 1
+            if isinstance(self.ttl_job, Job) and (
+                    self.value
+                    == self.default_value) and not self.default_return_ttl:
+                self.sensor_reset()
+
+        return True
 
     def do_eval(self, vars_dict=None, preserve_override=False, update=True):
         if vars_dict is None:
@@ -261,10 +325,10 @@ class Sensor(ABC):
 
         if self.eval_expr is None or (self.eval_preserve
                                       and not preserve_override):
-            return 0
+            return False
 
         if self.eval_require is not None and not vars_dict:
-            return 0
+            return False
 
         class Devnull():
             def write(self, *_):
@@ -296,7 +360,7 @@ class Sensor(ABC):
             for err in aeval.error:
                 logging.debug(err.get_error())
 
-        return 0
+        return False
 
     def dataset_use(self):
         if self.debounce_dataset:
@@ -320,10 +384,7 @@ class Gauge(Sensor):
         return GAUGE
 
     def reset(self):
-        self.value = self.default_value
-        self.dataset_ready = False
-        self.dataset_used = False
-        self.debounce_hits_remaining = 0
+        return self.sensor_reset()
 
     def fix_value(self, value):
         if isinstance(value, str):
@@ -335,21 +396,25 @@ class Gauge(Sensor):
                  node_addr=None,
                  key=None,
                  mode=SENSOR,
-                 default_value=None,
+                 default=None,
                  debounce=False,
                  ttl=None,
                  export=False,
                  parent_export=False,
                  eval_preserve=False,
                  eval_expr=None,
-                 reserved=False,
+                 cron=None,
                  eval_require=None,
                  node_id=None,
                  gw=None):
 
-        self.setup(sensor_id, node_addr, key, mode, default_value, debounce,
-                   ttl, export, parent_export, eval_preserve, eval_expr,
-                   reserved, eval_require, node_id, gw)
+        self.default_value = None
+        self.default_return_ttl = True
+        self.eval_skip_ttl = True
+
+        self.setup(sensor_id, node_addr, key, mode, default, debounce, ttl,
+                   export, parent_export, eval_preserve, eval_expr, cron,
+                   eval_require, node_id, gw)
 
         self.hits_total = 0
         self.reset()
@@ -364,10 +429,7 @@ class Counter(Sensor):
         return COUNTER
 
     def reset(self):
-        self.value = self.default_value
-        self.dataset_ready = False
-        self.dataset_used = False
-        self.debounce_hits_remaining = 0
+        return self.sensor_reset()
 
     def fix_value(self, value):
         if isinstance(value, str):
@@ -379,21 +441,25 @@ class Counter(Sensor):
                  node_addr=None,
                  key=None,
                  mode=SENSOR,
-                 default_value=None,
+                 default=None,
                  debounce=False,
                  ttl=None,
                  export=False,
                  parent_export=False,
                  eval_preserve=False,
                  eval_expr=None,
-                 reserved=False,
+                 cron=None,
                  eval_require=None,
                  node_id=None,
                  gw=None):
 
-        self.setup(sensor_id, node_addr, key, mode, default_value, debounce,
-                   ttl, export, parent_export, eval_preserve, eval_expr,
-                   reserved, eval_require, node_id, gw)
+        self.default_value = None
+        self.default_return_ttl = True
+        self.eval_skip_ttl = True
+
+        self.setup(sensor_id, node_addr, key, mode, default, debounce, ttl,
+                   export, parent_export, eval_preserve, eval_expr, cron,
+                   eval_require, node_id, gw)
 
         self.hits_total = 0
         self.reset()
@@ -408,11 +474,8 @@ class Binary(Sensor):
         return BINARY
 
     def reset(self):
-        self.value = self.default_value
         self.count_hit()
-        self.dataset_ready = False
-        self.dataset_used = False
-        self.debounce_hits_remaining = 0
+        return self.sensor_reset()
 
     def fix_value(self, value):
         values_map = {
@@ -449,21 +512,25 @@ class Binary(Sensor):
                  node_addr=None,
                  key=None,
                  mode=SENSOR,
-                 default_value=False,
+                 default=False,
                  debounce=False,
                  ttl=None,
                  export=False,
                  parent_export=False,
                  eval_preserve=False,
                  eval_expr=None,
-                 reserved=False,
+                 cron=None,
                  eval_require=None,
                  node_id=None,
                  gw=None):
 
-        self.setup(sensor_id, node_addr, key, mode, default_value, debounce,
-                   ttl, export, parent_export, eval_preserve, eval_expr,
-                   reserved, eval_require, node_id, gw)
+        self.default_value = False
+        self.default_return_ttl = False
+        self.eval_skip_ttl = False
+
+        self.setup(sensor_id, node_addr, key, mode, default, debounce, ttl,
+                   export, parent_export, eval_preserve, eval_expr, cron,
+                   eval_require, node_id, gw)
 
         self.value = self.default_value
         self.prev_value = self.default_value
@@ -482,10 +549,7 @@ class Message(Sensor):
         return MESSAGE
 
     def reset(self):
-        self.value = self.default_value
-        self.dataset_ready = False
-        self.dataset_used = False
-        self.debounce_hits_remaining = 0
+        return self.sensor_reset()
 
     def fix_value(self, value):
         return value
@@ -495,21 +559,25 @@ class Message(Sensor):
                  node_addr=None,
                  key=None,
                  mode=SENSOR,
-                 default_value='',
+                 default=None,
                  debounce=False,
                  ttl=None,
                  export=False,
                  parent_export=False,
                  eval_preserve=False,
                  eval_expr=None,
-                 reserved=False,
+                 cron=None,
                  eval_require=None,
                  node_id=None,
                  gw=None):
 
-        self.setup(sensor_id, node_addr, key, mode, default_value, debounce,
-                   ttl, export, parent_export, eval_preserve, eval_expr,
-                   reserved, eval_require, node_id, gw)
+        self.default_value = ""
+        self.default_return_ttl = True
+        self.eval_skip_ttl = True
+
+        self.setup(sensor_id, node_addr, key, mode, default, debounce, ttl,
+                   export, parent_export, eval_preserve, eval_expr, cron,
+                   eval_require, node_id, gw)
 
         self.hits_total = 0
         self.reset()
