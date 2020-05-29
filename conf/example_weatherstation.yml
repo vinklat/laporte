@@ -1,5 +1,7 @@
 ---
-# - some sensor sends temperature and relative humidity data to this gateway
+# Example: Weather station
+#
+# - some sensor sends temperature and relative humidity data
 # - temperature will be corrected (slope +1% and shift + 0.5) maybe because the sensor might not be accurate :)
 # - other two metrics will be calculated (dew point temperature and absolute humidity)
 # - for an inactive sensor, the data expires in 10 minutes
@@ -33,8 +35,9 @@ virtual:
                 debounce:
                     dataset: true
 
-                # metric will be corrected (slope +1% and shift + 0.5)
-                eval_expr: 'value * 1.01 + 0.5'
+                # for example: metric will be corrected (slope +1% and shift + 0.5)
+                eval:
+                    code: 'value * 1.01 + 0.5'
 
             hum_ratio:
                 type: gauge
@@ -44,30 +47,32 @@ virtual:
 
                 # percents should be stored as 0.0-1.0 (ratio)
                 # uncomment next line if sensor sends 1-100%
-                # eval_expr: 'value / 100'
+                # eval: { code: 'value / 100' }
 
             dew_celsius:
                 type: gauge
                 ttl: 600
 
                 # metric will be calculated
-                eval_require:
-                    temp_celsius: [ temp_celsius, value ]
-                    hum_ratio: [ hum_ratio, value ]
-                eval_expr: |
-                    l = log(hum_ratio);
-                    m = 17.27 * temp_celsius;
-                    n = temp_celsius + 237.3;
-                    b = (l + (m / n)) / 17.27;
-                    (237.3 * b) / (1 - b)
+                eval:
+                    require:
+                        temp_celsius: [ temp_celsius, value ]
+                        hum_ratio: [ hum_ratio, value ]
+                    code: |
+                        l = log(hum_ratio);
+                        m = 17.27 * temp_celsius;
+                        n = temp_celsius + 237.3;
+                        b = (l + (m / n)) / 17.27;
+                        (237.3 * b) / (1 - b)
 
             hum_grams:
                 type: gauge
                 ttl: 600
 
                 # metric will be calculated
-                eval_require:
-                    dew_celsius: [ dew_celsius, value ]
-                eval_expr: |
-                    t =  8.1332 - (1762.39 / (dew_celsius + 235.66));
-                    ((10**t) / 760.0) * 1000 * 18.0 / 22.4
+                eval:
+                    require:
+                        dew_celsius: [ dew_celsius, value ]
+                    code: |
+                        t =  8.1332 - (1762.39 / (dew_celsius + 235.66));
+                        ((10**t) / 760.0) * 1000 * 18.0 / 22.4

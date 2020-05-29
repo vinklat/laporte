@@ -45,26 +45,28 @@ test:
 
             int_state:
                 type: gauge
-                eval_require:
-                    c: [ success_state, value ]
-                    d: [ run_state, value ]
                 default:
                     value: 0
-                eval_expr: |
-                    a = True if value == 2 or value == 3 else False
-                    b = True if value == 1 or value == 3 else False
-                    c2 = ((not b) and c and (not d)) or (b and c and d) or (a and (not b) and d) or (a and b and (not d))
-                    d2 = ((not a) and (not c) and d) or ((not a) and b and c) or (a and c and d) or (a and b and (not c))
-                    c2 * 2 + d2
+                eval:
+                    require:
+                        c: [ success_state, value ]
+                        d: [ run_state, value ]
+                    code: |
+                        a = True if value == 2 or value == 3 else False
+                        b = True if value == 1 or value == 3 else False
+                        c2 = ((not b) and c and (not d)) or (b and c and d) or (a and (not b) and d) or (a and b and (not d))
+                        d2 = ((not a) and (not c) and d) or ((not a) and b and c) or (a and c and d) or (a and b and (not c))
+                        c2 * 2 + d2
             result_ratio:
                 type: gauge
                 default:
                     value: 0
                 export:
                     hidden: false
-                eval_require:
-                    x: [ int_state, value ]
-                eval_expr: "x / 3"
+                eval:
+                    require:
+                        x: [ int_state, value ]
+                    code: "x / 3"
                 
     b1_test: 
         export:
@@ -75,13 +77,14 @@ test:
                 type: counter
                 default:
                     value: 0
-                eval_require:
-                    {%- for i in range(1,6) %}
+                eval:
+                    require:
+                        {%- for i in range(1,6) %}
 
-                    a{{ i }}: [ a{{ i }}_test, result_ratio, value ]
-                    {%- endfor %}
-                eval_expr: |
-                    value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
+                        a{{ i }}: [ a{{ i }}_test, result_ratio, value ]
+                        {%- endfor %}
+                    code: |
+                        value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
 
     b2_test: 
         export:
@@ -93,14 +96,15 @@ test:
                 default:
                     value: 0
                 debounce:
-                    hits: 4                
-                eval_require:
-                    {%- for i in range(1,6) %}
+                    hits: 4
+                eval:
+                    require:
+                        {%- for i in range(1,6) %}
 
-                    a{{ i }}: [ a{{ i }}_test, result_ratio, value ]
-                    {%- endfor %}
-                eval_expr: |
-                    value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
+                        a{{ i }}: [ a{{ i }}_test, result_ratio, value ]
+                        {%- endfor %}
+                    code: |
+                        value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
 
     b3_test: 
         export:
@@ -115,23 +119,25 @@ test:
                     value: 0
                 export:
                     hidden: true
-                eval_require:
-                    a: [ a{{ i }}_test, result_ratio, value ]
-                eval_expr: |
-                    value + a
+                eval:
+                    require:
+                        a: [ a{{ i }}_test, result_ratio, value ]
+                    code: |
+                        value + a
             {%- endfor %}
 
             result_total:
                 type: counter
                 default:
                     value: 0
-                eval_require:
-                    {%- for i in range(1,6) %}
+                eval:
+                    require:
+                        {%- for i in range(1,6) %}
 
-                    a{{ i }}: [ result{{ i }}_total, value ]
-                    {%- endfor %}
-                eval_expr: |
-                    value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
+                        a{{ i }}: [ result{{ i }}_total, value ]
+                        {%- endfor %}
+                    code: |
+                        value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
 
     b4_test: 
         export:
@@ -149,23 +155,25 @@ test:
                 debounce:
                     changed: true
                     dataset: true
-                eval_require:
-                    a: [ a{{ i }}_test, result_ratio, value ]
-                eval_expr: |
-                    value + a
+                eval:
+                    require:
+                        a: [ a{{ i }}_test, result_ratio, value ]
+                    code: |
+                        value + a
             {%- endfor %}
 
             result_total:
                 type: counter
                 default:
                     value: 0
-                eval_require:
-                    {%- for i in range(1,6) %}
+                eval:
+                    require:
+                        {%- for i in range(1,6) %}
 
-                    a{{ i }}: [ result{{ i }}_total, value ]
-                    {%- endfor %}
-                eval_expr: |
-                    value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
+                        a{{ i }}: [ result{{ i }}_total, value ]
+                        {%- endfor %}
+                    code: |
+                        value {% for i in range(1,6) %} + a{{ i }}{% endfor %}
 
     c1_test:
         export:
@@ -182,14 +190,15 @@ test:
                     value: 0
                 debounce:
                     time: 0.1
-                eval_require:
-                    s: [ switch_state, value ]
-                    {%- for i in range(1,5) %}
+                eval:
+                    require:
+                        s: [ switch_state, value ]
+                        {%- for i in range(1,5) %}
 
-                    b{{ i }}: [ b{{ i }}_test, result_total, value ]
-                    {%- endfor %}
-                eval_expr: |
-                    1/3 + {% for i in range(1,5) %} + b{{ i }}{% endfor %}
+                        b{{ i }}: [ b{{ i }}_test, result_total, value ]
+                        {%- endfor %}
+                    code: |
+                        1/3 + {% for i in range(1,5) %} + b{{ i }}{% endfor %}
 
     test:
         export:
@@ -201,6 +210,7 @@ test:
                 type: binary
                 debounce:
                     changed: true
-                eval_require:
-                    x: [ c1_test, result_total, value ]
-                eval_expr: "x == 197"
+                eval:
+                    require:
+                        x: [ c1_test, result_total, value ]
+                    code: "x == 197"

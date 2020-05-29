@@ -1,11 +1,12 @@
 ---
 # Example: example of using a binary sensors
+#
 # - two switches with 20s delay
 # - the light works during the activity of at least one switch
 #
 # you can control the switch by curl (rest api):
-#   curl http://localhost:9128/api/metrics/switch1 -d "switch_state=on" -X PUT    
-#   curl http://localhost:9128/api/metrics/switch1 -d "switch_state=off" -X PUT    
+#   curl http://localhost:9128/api/metrics/switch1 -d "switch_state=on" -X PUT
+#   curl http://localhost:9128/api/metrics/switch1 -d "switch_state=off" -X PUT
 #
 # watch status via live page
 #   http://localhost:9128
@@ -28,11 +29,10 @@ virtual:
         actuators:
             relay_state:
                 type: binary
-
-                # this sensor monitors state of other sensors
-                eval_require:
-                    sw1: [ switch1, switch_state, value ]
-                    sw2: [ switch2, switch_state, value ]
-
-                # value will be calculated
-                eval_expr: "sw1 or sw2"
+                eval:
+                    # this sensor monitors state of other sensors
+                    require:
+                        sw1: [ switch1, switch_state, value ]
+                        sw2: [ switch2, switch_state, value ]
+                    # value will be calculated
+                    code: 'sw1 or sw2'

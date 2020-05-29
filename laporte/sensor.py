@@ -43,10 +43,11 @@ class Sensor(ABC):
     export_hidden = None
     export_prefix = None
     eval_require = None
-    eval_preserve = None
-    eval_expr = None
+    eval_code = None
     eval_skip_ttl = None
+    group = None  # not used
     cron = None
+    desc = None  # not used
     node_id = None
     gw = None
 
@@ -69,8 +70,7 @@ class Sensor(ABC):
     cron_jobs = None
 
     def setup(self, sensor_id, node_addr, key, mode, default, debounce, ttl,
-              export, parent_export, eval_preserve, eval_expr, cron,
-              eval_require, node_id, gw):
+              export, parent_export, pyeval, group, cron, desc, node_id, gw):
         '''assign values to the data members of the class'''
 
         self.node_addr = node_addr
@@ -78,10 +78,9 @@ class Sensor(ABC):
         self.sensor_id = sensor_id
         self.mode = mode
         self.ttl = ttl
-        self.eval_preserve = eval_preserve
-        self.eval_expr = eval_expr
+        self.group = group
         self.cron = cron
-        self.eval_require = eval_require
+        self.desc = desc
         self.node_id = node_id
         self.gw = gw
         self.export_sensor_id = sensor_id
@@ -91,6 +90,7 @@ class Sensor(ABC):
         self.set_export(export, parent_export)
         self.__set_default(default)
         self.__set_debounce(debounce)
+        self.__set_eval(pyeval)
 
     def set_export(self, export, parent_export):
         '''set export related attributes  - labels and others'''
@@ -154,14 +154,17 @@ class Sensor(ABC):
                 self.default_value = default['value']
             if 'default_return_ttl' in default:
                 self.default_return_ttl = default['default_return_ttl']
-            if 'skip_ttl' in default:
-                self.eval_skip_ttl = default['skip_ttl']
 
-    def __set_eval(self, evalset):
-        # TODO move eval_expr and eval_require here
+    def __set_eval(self, pyeval):
+        '''set eval related attributes'''
 
-        if 'skip_ttl' in evalset:
-            self.eval_skip_ttl = evalset['skip_ttl']
+        if isinstance(pyeval, dict):
+            if 'code' in pyeval:
+                self.eval_code = pyeval['code']
+            if 'require' in pyeval:
+                self.eval_require = pyeval['require']
+            if 'skip_ttl' in pyeval:
+                self.eval_skip_ttl = pyeval['skip_ttl']
 
     def clone(self, new_node_id):
         '''
@@ -318,13 +321,12 @@ class Sensor(ABC):
 
         return True
 
-    def do_eval(self, vars_dict=None, preserve_override=False, update=True):
+    def do_eval(self, vars_dict=None, update=True):
         if vars_dict is None:
             # because {} is dangerous default value
             vars_dict = {}
 
-        if self.eval_expr is None or (self.eval_preserve
-                                      and not preserve_override):
+        if self.eval_code is None:
             return False
 
         if self.eval_require is not None and not vars_dict:
@@ -349,7 +351,7 @@ class Sensor(ABC):
                             err_writer=Devnull(),
                             symtable=syms)
 
-        result = aeval.eval(self.eval_expr)
+        result = aeval.eval(self.eval_code)
 
         if not result is None:
             logging.info("eval: %s", {self.node_id: {self.sensor_id: result}})
@@ -401,10 +403,10 @@ class Gauge(Sensor):
                  ttl=None,
                  export=False,
                  parent_export=False,
-                 eval_preserve=False,
-                 eval_expr=None,
+                 pyeval=None,
+                 group=None,
                  cron=None,
-                 eval_require=None,
+                 desc=None,
                  node_id=None,
                  gw=None):
 
@@ -413,8 +415,8 @@ class Gauge(Sensor):
         self.eval_skip_ttl = True
 
         self.setup(sensor_id, node_addr, key, mode, default, debounce, ttl,
-                   export, parent_export, eval_preserve, eval_expr, cron,
-                   eval_require, node_id, gw)
+                   export, parent_export, pyeval, group, cron, desc, node_id,
+                   gw)
 
         self.hits_total = 0
         self.reset()
@@ -446,10 +448,10 @@ class Counter(Sensor):
                  ttl=None,
                  export=False,
                  parent_export=False,
-                 eval_preserve=False,
-                 eval_expr=None,
+                 pyeval=None,
+                 group=None,
                  cron=None,
-                 eval_require=None,
+                 desc=None,
                  node_id=None,
                  gw=None):
 
@@ -458,8 +460,8 @@ class Counter(Sensor):
         self.eval_skip_ttl = True
 
         self.setup(sensor_id, node_addr, key, mode, default, debounce, ttl,
-                   export, parent_export, eval_preserve, eval_expr, cron,
-                   eval_require, node_id, gw)
+                   export, parent_export, pyeval, group, cron, desc, node_id,
+                   gw)
 
         self.hits_total = 0
         self.reset()
@@ -517,10 +519,10 @@ class Binary(Sensor):
                  ttl=None,
                  export=False,
                  parent_export=False,
-                 eval_preserve=False,
-                 eval_expr=None,
+                 pyeval=None,
+                 group=None,
                  cron=None,
-                 eval_require=None,
+                 desc=None,
                  node_id=None,
                  gw=None):
 
@@ -529,8 +531,8 @@ class Binary(Sensor):
         self.eval_skip_ttl = False
 
         self.setup(sensor_id, node_addr, key, mode, default, debounce, ttl,
-                   export, parent_export, eval_preserve, eval_expr, cron,
-                   eval_require, node_id, gw)
+                   export, parent_export, pyeval, group, cron, desc, node_id,
+                   gw)
 
         self.value = self.default_value
         self.prev_value = self.default_value
@@ -564,10 +566,10 @@ class Message(Sensor):
                  ttl=None,
                  export=False,
                  parent_export=False,
-                 eval_preserve=False,
-                 eval_expr=None,
+                 pyeval=None,
+                 group=None,
                  cron=None,
-                 eval_require=None,
+                 desc=None,
                  node_id=None,
                  gw=None):
 
@@ -576,8 +578,8 @@ class Message(Sensor):
         self.eval_skip_ttl = True
 
         self.setup(sensor_id, node_addr, key, mode, default, debounce, ttl,
-                   export, parent_export, eval_preserve, eval_expr, cron,
-                   eval_require, node_id, gw)
+                   export, parent_export, pyeval, group, cron, desc, node_id,
+                   gw)
 
         self.hits_total = 0
         self.reset()

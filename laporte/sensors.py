@@ -59,8 +59,8 @@ class Sensors():
         }
 
         for p in [
-                'default', 'debounce', 'ttl', 'eval_preserve', 'eval_expr',
-                'eval_require', 'cron', 'key'
+                'default', 'debounce', 'ttl', 'eval', 'group', 'desc', 'cron',
+                'key'
         ]:
             if p in sensor_parent_config_dict:
                 #note: only ttl should pass now
@@ -75,6 +75,11 @@ class Sensors():
 
             if p in sensor_config_dict:
                 param[p] = sensor_config_dict[p]
+
+        # rename eval because it's Python built-in
+        if 'eval' in param:
+            param['pyeval'] = param['eval']
+            del param['eval']
 
         if 'type' in sensor_config_dict:
             t = sensor_config_dict['type']
@@ -414,7 +419,7 @@ class Sensors():
                         ttl_add_job = False
                         if sensor.value != sensor.prev_value:
                             ttl_end_job = True
-                    if call_after_expire:
+                    if call_after_expire and sensor.value == sensor.default_value:
                         ttl_add_job = False
                         ttl_end_job = True
 
@@ -519,11 +524,9 @@ class Sensors():
             if sensor.set(sensor_values_dict[sensor_id], increment=increment):
                 changed = 1
 
-                if sensor.eval_expr is not None:
+                if sensor.eval_code is not None:
                     vars_dict = self.__get_sensor_required_vars_dict(sensor)
-                    sensor.do_eval(vars_dict=vars_dict,
-                                   update=False,
-                                   preserve_override=True)
+                    sensor.do_eval(vars_dict=vars_dict, update=False)
 
                 self.__do_requiring_eval(sensor)
                 self.__used_dataset_reset()
@@ -539,11 +542,9 @@ class Sensors():
         sensor.reset()
 
         if not sensor.eval_skip_ttl and not skip_eval and sensor.value is not None:
-            if sensor.eval_expr is not None:
+            if sensor.eval_code is not None:
                 vars_dict = self.__get_sensor_required_vars_dict(sensor)
-                sensor.do_eval(vars_dict=vars_dict,
-                               update=False,
-                               preserve_override=True)
+                sensor.do_eval(vars_dict=vars_dict, update=False)
 
             self.__do_requiring_eval(sensor)
             self.__used_dataset_reset()

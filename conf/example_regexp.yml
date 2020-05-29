@@ -1,4 +1,6 @@
 ---
+# Example: using regexp in eval
+#
 #  - parse metric from text message using regexp (https://docs.python.org/3/library/re.html)
 #
 # you can send a string (some message) by curl
@@ -16,11 +18,12 @@ virtual:
                 type: message
             size_bytes:
                 type: gauge
-                eval_require:
-                    s: [ size_string, value ]
-                eval_expr: |
-                    m = re.search(r'\D*(\d+)\D*', s)
-                    m.group(1)
+                eval:
+                    require:
+                        s: [ size_string, value ]
+                    code: |
+                        m = re.search(r'\D*(\d+)\D*', s)
+                        m.group(1)
 
 
 

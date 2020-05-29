@@ -1,4 +1,6 @@
 ---
+# Example: Hello World message
+#
 # - because every right software must be able to say hello :)
 #
 # you can send temperature by curl
@@ -18,7 +20,8 @@ virtual:
         actuators:
             temp_string:
                 type: message
-                eval_require:
-                    t: [ weather1, temp_celsius, value ]
-                eval_expr: |
-                    "hello world! temperature is {}°C".format(t)
+                eval:
+                    require:
+                        t: [ weather1, temp_celsius, value ]
+                    code: |
+                        "hello world! temperature is {}°C".format(t)

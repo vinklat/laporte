@@ -1,4 +1,6 @@
 ---
+# Example: using template
+#
 # - use the template instead of repeating similar node definition
 #
 # you can send temperature by curl
@@ -20,6 +22,7 @@ virtual:
                 type: gauge
             frozen_state:
                 type: binary
-                eval_require:
-                    t : [ temp_celsius, value ]
-                eval_expr: 't < 0'
+                eval:
+                    require:
+                        t : [ temp_celsius, value ]
+                    code: 't < 0'
