@@ -302,11 +302,16 @@ class Sensors():
                         return {}
 
                     search_sensor = self.__get_sensor(node_id, sensor_id)
-                    value = next(
-                        search_sensor.get_data(selected={metric_name}))[1]
 
                     if search_sensor.debounce_dataset and not search_sensor.dataset_ready:
-                        value = None
+                        logging.debug(
+                            "skip eval %s.%s: not ready %s.%s in dataset",
+                            sensor.node_id, sensor.sensor_id,
+                            search_sensor.node_id, search_sensor.sensor_id)
+                        return {}
+
+                    value = next(
+                        search_sensor.get_data(selected={metric_name}))[1]
 
                     if value is not None:
                         ret[var] = value
@@ -348,12 +353,23 @@ class Sensors():
                         x.add(s)
                         yield s
 
-    def __do_requiring_eval(self, sensor, level=0):
-        if level < 8:
-            for s in self.__get_requiring_sensors(sensor):
-                vars_dict = self.__get_sensor_required_vars_dict(s)
-                if s.do_eval(vars_dict=vars_dict):
-                    self.__do_requiring_eval(s, level=level + 1)
+    def __do_requiring_eval(self, sensor, level=0, origin_sensors=None):
+        if (level < 8) and (sensor.value != sensor.eval_break_value):
+            for req_sensor in self.__get_requiring_sensors(sensor):
+                vars_dict = self.__get_sensor_required_vars_dict(req_sensor)
+
+                if not isinstance(origin_sensors, list):
+                    new_origin_sensors = [(sensor.node_id, sensor.sensor_id)]
+                else:
+                    new_origin_sensors = origin_sensors + [
+                        (sensor.node_id, sensor.sensor_id)
+                    ]
+
+                if req_sensor.do_eval(vars_dict=vars_dict,
+                                      origin_list=new_origin_sensors):
+                    self.__do_requiring_eval(req_sensor,
+                                             level=level + 1,
+                                             origin_sensors=new_origin_sensors)
 
     def __used_dataset_reset(self):
         for s in self.sensor_index:
@@ -424,8 +440,6 @@ class Sensors():
                         ttl_end_job = True
 
                     if ttl_add_job:
-                        logging.debug("scheduler: add ttl job for %s.%s",
-                                      node_id, sensor_id)
                         ttl_time = datetime.fromtimestamp(
                             sensor.hit_timestamp) + timedelta(
                                 seconds=sensor.ttl)
@@ -480,6 +494,11 @@ class Sensors():
                               json.dumps({gateway: data}),
                               room=gateway,
                               namespace=METRICS_NAMESPACE)
+
+        diff2 = self.__get_changed_nodes_dict()
+        if diff2:
+            logging.debug("scheduler: new ttl jobs: %s", diff2)
+
         return True
 
     def conv_addrs_to_ids(self, addrs_dict):
@@ -541,7 +560,7 @@ class Sensors():
     def __reset_sensor(self, sensor, skip_eval=False):
         sensor.reset()
 
-        if not sensor.eval_skip_ttl and not skip_eval and sensor.value is not None:
+        if not sensor.eval_skip_expired and not skip_eval and sensor.value is not None:
             if sensor.eval_code is not None:
                 vars_dict = self.__get_sensor_required_vars_dict(sensor)
                 sensor.do_eval(vars_dict=vars_dict, update=False)
