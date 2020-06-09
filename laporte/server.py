@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=wrong-import-position, wrong-import-order, ungrouped-imports
-# pylint: disable=invalid-name, no-self-use,
-# pylint: disable=missing-function-docstring, missing-class-docstring
-'''a Flask application making up the Laporte http server'''
+'''a Flask application making up the Laporte'''
 
+# pylint: disable=wrong-import-position, wrong-import-order, ungrouped-imports
 from gevent import monkey
 monkey.patch_all()
 import logging
+import sys
 import json
 from flask import Flask, Blueprint, request, Response, abort, render_template
 from flask_restx import Api, Resource
@@ -15,7 +14,6 @@ from flask_bootstrap import Bootstrap
 from geventwebsocket.handler import WebSocketHandler
 from gevent.pywsgi import WSGIServer, LoggingLogAdapter
 from apscheduler.schedulers.gevent import GeventScheduler
-from apscheduler.triggers.interval import IntervalTrigger
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from laporte.version import __version__, get_build_info
@@ -51,7 +49,7 @@ class MetricsNamespace(Namespace):
             logger.info('SocketIO message: node_id=%s: data=%s', node_id,
                         str(request_form))
             try:
-                sensors.set_values(node_id, request_form)
+                sensors.set_node_values(node_id, request_form)
             except KeyError:
                 pass
 
@@ -64,7 +62,7 @@ class MetricsNamespace(Namespace):
             logger.info('SocketIO translated message: node_id=%s: data=%s',
                         node_id, str(request_form))
             try:
-                sensors.set_values(node_id, request_form)
+                sensors.set_node_values(node_id, request_form)
             except KeyError:
                 pass
 
@@ -85,9 +83,9 @@ class EventsNamespace(Namespace):
     def on_connect():
         '''emit initital event after a successful connection'''
 
-        emit('init_response',
-             json.dumps(sensors.get_metrics_dict_by_node(skip_None=False)),
-             namespace=EVENTS_NAMESPACE)
+        data = sensors.get_metrics_dict_by_node(skip_None=False)
+
+        emit('init_response', json.dumps(data), namespace=EVENTS_NAMESPACE)
 
 
 class DefaultNamespace(Namespace):
@@ -113,6 +111,7 @@ sio.on_namespace(DefaultNamespace('/'))
 sio.on_namespace(MetricsNamespace(METRICS_NAMESPACE))
 sio.on_namespace(EventsNamespace(EVENTS_NAMESPACE))
 sensors.sio = sio
+sensors.scheduler = GeventScheduler()
 
 # REST API methods
 
@@ -145,7 +144,7 @@ class NodeMetrics(Resource):
         '''set sensors of a node'''
         logger.info("API/set: %s: %s", node_id, str(request.form.to_dict()))
         try:
-            ret = sensors.set_values(node_id, request.form)
+            ret = sensors.set_node_values(node_id, request.form)
         except KeyError:
             logger.warning("node %s or sensor not found", node_id)
             abort(404)  # sensor not configured
@@ -177,7 +176,9 @@ class IncNodeMetrics(Resource):
         '''increment sensor values of a node'''
         logger.info("API/inc: %s: %s", node_id, str(request.form.to_dict()))
         try:
-            ret = sensors.set_values(node_id, request.form, increment=True)
+            ret = sensors.set_node_values(node_id,
+                                          request.form,
+                                          increment=True)
         except KeyError:
             logger.warning("node %s or sensor not found", node_id)
             abort(404)  # sensor not configured
@@ -312,12 +313,18 @@ def table():
                            data=sensors.get_sensors_dump_dict())
 
 
+@app.route('/scheduler')
+def scheduler():
+    return render_template('scheduler.html',
+                           time_locale=pars.time_locale,
+                           async_mode=sio.async_mode)
+
+
 @app.route('/log')
 def log():
     return render_template('log.html',
                            time_locale=pars.time_locale,
-                           async_mode=sio.async_mode,
-                           data=sensors.get_sensors_dump_dict())
+                           async_mode=sio.async_mode)
 
 
 @app.route('/doc')
@@ -336,19 +343,16 @@ def metrics():
     return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
 
 
-# start scheduler
-scheduler = GeventScheduler()
-scheduler.start()
-scheduler.add_job(func=sensors.update_sensors_ttl,
-                  trigger=IntervalTrigger(seconds=1),
-                  id='ttl_job',
-                  name='update ttl counters every second',
-                  replace_existing=True)
-
-
 # start http server
 def run_server():
-    logger.info("http server listen %s:%s", pars.addr, pars.port)
+    sensors.scheduler.start()
+    try:
+        sensors.load_config(pars)
+    except sensors.ConfigException as exc:
+        logger.error(exc)
+        sys.exit(1)
+
+    logger.info("HTTP server listen %s:%s", pars.addr, pars.port)
     dlog = LoggingLogAdapter(logger, level=logging.DEBUG)
     errlog = LoggingLogAdapter(logger, level=logging.ERROR)
     http_server = WSGIServer((pars.addr, pars.port),
@@ -356,5 +360,4 @@ def run_server():
                              log=dlog,
                              error_log=errlog,
                              handler_class=WebSocketHandler)
-    sensors.load_config(pars)
     http_server.serve_forever()

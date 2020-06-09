@@ -26,14 +26,14 @@ virtual:
             run_state:
                 type: binary
                 # max duration of a job (example: backup time window)
-                ttl: 10
+                ttl: 20
                 export:
                     hidden: true
 
             success_state:
                 type: binary
                 # max duration of success state (example: backup age)
-                ttl: 20
+                ttl: 30
                 export:
                     hidden: true
 
@@ -41,44 +41,48 @@ virtual:
             # variant 1: using logic operators
             job_state:
                 type: gauge
-                eval_require:
-                    c: [ success_state, value ]
-                    d: [ run_state, value ]
-                default_value: 0
-                eval_expr: |
-                    a = True if value == 2 or value == 3 else False
-                    b = True if value == 1 or value == 3 else False
-                    c2 = ((not b) and c and (not d)) or (b and c and d) or (a and (not b) and d) or (a and b and (not d))
-                    d2 = ((not a) and (not c) and d) or ((not a) and b and c) or (a and c and d) or (a and b and (not c))
-                    c2 * 2 + d2
+                default:
+                    value: 0
+                eval:
+                    require:
+                        c: [ success_state, value ]
+                        d: [ run_state, value ]
+                    code: |
+                        a = True if value == 2 or value == 3 else False
+                        b = True if value == 1 or value == 3 else False
+                        c2 = ((not b) and c and (not d)) or (b and c and d) or (a and (not b) and d) or (a and b and (not d))
+                        d2 = ((not a) and (not c) and d) or ((not a) and b and c) or (a and c and d) or (a and b and (not c))
+                        c2 * 2 + d2
 
             # variant 2: algorithm using ifs (some result as variant 1)
             job_state2:
                 type: gauge
-                eval_require:
-                    s: [ success_state, value ]
-                    r: [ run_state, value ]
-                default_value: 0
-                eval_expr: |
-                    S = value
-                    if S==0:
-                        if r and not s:
-                            S=1
-                        if s and not r:
-                            S=2
-                    elif S==1:
-                        if (not s) and (not r):
-                            S=0
-                        if s and r:
-                            S=3
-                    elif S==2:
-                        if (not r) and (not s):
-                            S=0
-                        if r and s:
-                            S=3
-                    elif S==3:
-                        if (not r) and (not s):
-                            S=1
-                        if s and not r:
-                            S=2
-                    S
+                default:
+                    value: 0
+                eval:
+                    require:
+                        s: [ success_state, value ]
+                        r: [ run_state, value ]
+                    code: |
+                        S = value
+                        if S==0:
+                            if r and not s:
+                                S=1
+                            if s and not r:
+                                S=2
+                        elif S==1:
+                            if (not s) and (not r):
+                                S=0
+                            if s and r:
+                                S=3
+                        elif S==2:
+                            if (not r) and (not s):
+                                S=0
+                            if r and s:
+                                S=3
+                        elif S==3:
+                            if (not r) and (not s):
+                                S=1
+                            if s and not r:
+                                S=2
+                        S

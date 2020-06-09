@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}scheduler{% endblock %}
+
+{% block content %}
+  <div style="padding-top: 3rem">
+    <table class="table">
+      <thead>
+        <tr class="bg-light">
+            <th style="width: 20%" scope="col">next run</th>
+            <th style="width: 20%" scope="col">action</th>
+            <th style="width: 20%" scope="col">node</th>
+            <th style="width: 40%" scope="col">sensor</th>
+        </tr>
+      </thead>
+      <tbody id="jobs">
+      </tbody>
+  </div>
+
+<script type="text/javascript" charset="utf-8">
+    time_locale = "{{ time_locale }}";
+</script>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="{{ url_for('static', filename='js/scheduler.js') }}"> </script>
+{% endblock %}

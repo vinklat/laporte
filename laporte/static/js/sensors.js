@@ -1,16 +1,20 @@
+var countdowns = {};
+
 function fill_metrics(msg) {
-    obj = JSON.parse(msg);
+    var obj = JSON.parse(msg);
+    var tnow = new Date();
+    var tnowzero = tnow - (60 * 60 * 1000 * tnow.getHours()) - (60 * 1000 * tnow.getMinutes()) - (1000 * tnow.getSeconds());
+    var node_id, sensor_id, metric;
 
     for (node_id in obj) {
         for (sensor_id in obj[node_id]) {
-            var sensor_label = (node_id + "_" + sensor_id).replace(/\./g,"-");
-            var sensor_type = sensors[sensor_label].type;
-            var default_value = sensors[sensor_label].default_value;
-            var ttl = sensors[sensor_label].ttl;
+            var sensor_label = (node_id + "_" + sensor_id).replace(/\./g, "-");
+
             for (metric in obj[node_id][sensor_id]) {
                 var metric_label = sensor_label + "_" + metric;
                 var id = "#" + metric_label;
                 var value = obj[node_id][sensor_id][metric];
+
                 switch (typeof value) {
                     case "number":
                         if (metric == "duration_seconds") {
@@ -26,23 +30,17 @@ function fill_metrics(msg) {
                             } else {
                                 $(id).html(value.toString() + "&#xd7;");
                             }
+                        } else if (metric == "exp_timestamp") {
+                            countdowns[sensor_label] = Math.round(value - tnow/1000);
                         } else if (metric == "hit_timestamp") {
                             var t = new Date(value * 1000);
-                            var tnow = new Date();
-                            var tnowstart = tnow - (60 * 60 * 1000 * tnow.getHours()) - (60 * 1000 * tnow.getMinutes()) - (1000 * tnow.getSeconds())
                             var s;
-                            if (t > tnowstart) {
+                            if (t > tnowzero) {
                                 s = t.toLocaleTimeString(time_locale);
                             } else {
                                 s = t.toLocaleString(time_locale);
                             }
                             $(id).html("(last " + s + ")");
-                            if ((typeof ttl == 'number') && ((sensor_type != 3) || (document.getElementById(sensor_label + "_value").innerHTML != default_value.toString()))) {
-                                sensors[sensor_label].ttl_remaining = Math.round(ttl - ((tnow - t)/1000));
-                            } else {
-                                sensors[sensor_label].ttl_remaining = 0;
-                            }
-                        
                         } else {
                             value = Math.round(value * 100) / 100;
                             $(id).html(value.toString());
@@ -54,6 +52,15 @@ function fill_metrics(msg) {
                     case "boolean":
                         value ? $(id).html("true") : $(id).html("false");
                         break;
+                    case "object":
+                        // if exp_timestamp is null
+                        if (metric == "exp_timestamp") {
+                             delete countdowns[sensor_label];
+                             $("#" + sensor_label + "_ttl").html("");
+                        } else {
+                            $(id).html("");
+                        }
+                        break;
                     default:
                         $(id).html("");
                         break;
@@ -64,7 +71,7 @@ function fill_metrics(msg) {
     }
 }
 
-$(document).ready(function() {
+$(document).ready(function () {
     var namespace = '/events';
     // Connect to the Socket.IO server.
     // The connection URL has the following format:
@@ -72,33 +79,35 @@ $(document).ready(function() {
     var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
 
     // Event handlers:
-    socket.on('connect', function() {
+    socket.on('connect', function () {
         $('#status').html("connected");
     });
 
-    socket.on('disconnect', function() {
+    socket.on('disconnect', function () {
         $('#status').html("not connected");
     });
- 
-    socket.on('init_response', function(msg) {
+
+    socket.on('init_response', function (msg) {
         fill_metrics(msg);
     });
 
-    socket.on('update_response', function(msg) {
+    socket.on('update_response', function (msg) {
         fill_metrics(msg);
     });
 });
 
 function fmtMSS(s) {
-    return (s - (s %= 60)) / 60 + (9 < s ? ':' : ':0') + s
+    return (s - (s %= 60)) / 60 + (9 < s ? ':' : ':0') + s;
 }
 
-var timer = setInterval(function() {
-    for (x in sensors) {
-        if (sensors[x].ttl_remaining > 0) {
-            $("#" + x + "_ttl").html("(exp " + fmtMSS(sensors[x].ttl_remaining) + ")");
-            sensors[x].ttl_remaining -= 1;
+var timer = setInterval(function () {
+    var x;
+    for (x in countdowns) {
+        if (countdowns[x] > 0) {
+            $("#" + x + "_ttl").html("(exp " + fmtMSS(countdowns[x]) + ")");
+            countdowns[x] -= 1;
         } else {
+            delete countdowns[x];
             $("#" + x + "_ttl").html("");
         }
     }

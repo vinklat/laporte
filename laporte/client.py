@@ -3,6 +3,7 @@
 
 import logging
 import json
+from time import sleep
 import socketio
 from prometheus_client import Counter
 
@@ -104,7 +105,6 @@ class MetricsNamespace(socketio.ClientNamespace):
 
 class EventsNamespace(socketio.ClientNamespace):
     '''class-based Socket.IO event handlers for events'''
-
     @staticmethod
     def default_init_handler(nodes):
         '''
@@ -160,7 +160,6 @@ class EventsNamespace(socketio.ClientNamespace):
 
 class DefaultNamespace(socketio.ClientNamespace):
     '''class-based Socket.IO event handlers for default responses'''
-
     @staticmethod
     def on_connect():
         '''fired upon a successful connection'''
@@ -205,7 +204,6 @@ class DefaultNamespace(socketio.ClientNamespace):
 
 class LaporteClient():
     '''Object containing Socket.IO client with registered namespaces.'''
-
     def __init__(self, addr, port, gateways=None, events=False):
         '''
         Connect to the laporte server.
@@ -237,8 +235,15 @@ class LaporteClient():
             namespaces.append(EVENTS_NAMESPACE)
             self.sio.register_namespace(self.ns_events)
 
-        self.sio.connect('http://{}:{}'.format(addr, port),
-                         namespaces=namespaces)
+        while True:
+            try:
+                self.sio.connect('http://{}:{}'.format(addr, port),
+                                 namespaces=namespaces)
+            except socketio.exceptions.ConnectionError as exc:
+                logging.error("%s", exc)
+                sleep(10)
+            else:
+                break
 
     def loop(self):
         '''main loop for Socket.IO client'''
