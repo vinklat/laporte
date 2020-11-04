@@ -373,13 +373,17 @@ class Sensor(ABC):
         result = aeval.eval(self.eval_code)
 
         if not result is None:
-            logging.info("eval: %s", {self.node_id: {self.sensor_id: result}})
+            logging.info("eval %s.%s: OK, result = %s", self.node_id,
+                         self.sensor_id, result)
             return self.set(result, update=update)
 
-        logging.debug("can't eval %s.%s", self.node_id, self.sensor_id)
         if len(aeval.error) > 0:
+            logging.error("eval %s.%s: ERROR", self.node_id, self.sensor_id)
             for err in aeval.error:
-                logging.debug(err.get_error())
+                logging.error(err.get_error())
+        else:
+            logging.debug("eval %s.%s: no result", self.node_id,
+                          self.sensor_id)
 
         return False
 
