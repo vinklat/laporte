@@ -2,6 +2,7 @@
 '''cmd line argument parser for the Laporte http server'''
 
 import logging
+import os
 from argparse import ArgumentParser, ArgumentTypeError
 from laporte.version import __version__, get_build_info
 
@@ -27,63 +28,100 @@ def log_level_string_to_int(arg_string):
 def get_pars():
     '''get parameters from from command line arguments'''
 
+    env_vars = {
+        'LISTEN_ADDR': {
+            'default': '0.0.0.0'
+        },
+        'LISTEN_PORT': {
+            'default': 9128
+        },
+        'CONFIG_FILE': {
+            'default': 'conf/sensors.yml'
+        },
+        'CONFIG_JINJA': {
+            'default': False
+        },
+        'CONFIG_DIR': {
+            'default': 'conf'
+        },
+        'TIME_LOCALE': {
+            'default': 'en-US'
+        },
+        'LOG_LEVEL': {
+            'default': 'DEBUG'
+        },
+    }
+
+    for env_var, env_pars in env_vars.items():
+        if env_var in os.environ:
+            if isinstance(env_pars['default'], bool):
+                env_vars[env_var]['default'] = bool(os.environ[env_var])
+            elif isinstance(env_vars[env_var]['default'], int):
+                env_vars[env_var]['default'] = int(os.environ[env_var])
+            else:
+                env_vars[env_var]['default'] = os.environ[env_var]
+            env_vars[env_var]['required'] = False
+
     parser = ArgumentParser(description='Laporte {}'.format(__version__))
     parser.add_argument('-a',
-                        '--address',
+                        '--listen-address',
                         action='store',
-                        dest='addr',
-                        help='listen address',
+                        dest='listen_addr',
+                        help='listen address (default {0})'.format(
+                            env_vars['LISTEN_ADDR']['default']),
                         type=str,
-                        default='')
+                        **env_vars['LISTEN_ADDR'])
     parser.add_argument('-p',
-                        '--port',
+                        '--listen-port',
                         action='store',
-                        dest='port',
-                        help='listen port',
+                        dest='listen_port',
+                        help='listen port (default {0})'.format(
+                            env_vars['LISTEN_PORT']['default']),
                         type=int,
-                        default=9128)
-    parser.add_argument(
-        '-c',
-        '--sensor-config',
-        action='store',
-        dest='sensors_fname',
-        help='yaml or yaml+jinja2 file with sensor configuration',
-        type=str,
-        default='conf/sensors.yml')
+                        **env_vars['LISTEN_PORT'])
+    parser.add_argument('-c',
+                        '--config-file',
+                        action='store',
+                        dest='config_file',
+                        help='yaml or yaml+jinja2 file with '
+                        'sensor configuration (default {0})'.format(
+                            env_vars['CONFIG_FILE']['default']),
+                        type=str,
+                        **env_vars['CONFIG_FILE'])
+    parser.add_argument('-d',
+                        '--config-dir',
+                        action='store',
+                        dest='config_dir',
+                        help='config directory (default {0})'.format(
+                            env_vars['CONFIG_DIR']['default']),
+                        type=str,
+                        **env_vars['CONFIG_DIR'])
     parser.add_argument('-j',
-                        '--jinja2',
+                        '--config-jinja',
                         action='store_true',
-                        dest='jinja2',
-                        help='use jinja2 in yaml config file')
-    parser.add_argument(
-        '-d',
-        '--sensor-config-dir',
-        action='store',
-        dest='sensors_dir',
-        help=
-        'config directory (required when there are other files included in config)',
-        type=str,
-        default='conf')
+                        dest='config_jinja',
+                        help='use jinja2 in yaml config file',
+                        **env_vars['CONFIG_JINJA'])
     parser.add_argument('-t',
                         '--time-locale',
                         action='store',
                         dest='time_locale',
-                        help='time formatting locale (en-US, cs-CZ , ...)',
+                        help='time formatting locale (default {0})'.format(
+                            env_vars['TIME_LOCALE']['default']),
                         type=str,
-                        default='en-US')
-
+                        **env_vars['TIME_LOCALE'])
     parser.add_argument('-V',
                         '--version',
                         action='version',
                         version=str(get_build_info()))
-
-    parser.add_argument(
-        '-l',
-        '--log-level',
-        action='store',
-        dest='log_level',
-        help='set the logging output level. {0}'.format(_LOG_LEVEL_STRINGS),
-        type=log_level_string_to_int,
-        default='INFO')
-
+    parser.add_argument('-l',
+                        '--log-level',
+                        action='store',
+                        dest='log_level',
+                        help='set the logging output level. '
+                        '{0} (default {1})'.format(
+                            _LOG_LEVEL_STRINGS,
+                            env_vars['LOG_LEVEL']['default']),
+                        type=log_level_string_to_int,
+                        **env_vars['LOG_LEVEL'])
     return parser.parse_args()

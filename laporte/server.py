@@ -37,7 +37,6 @@ else:
     logging.getLogger('socketio').setLevel(logging.WARNING)
     logging.getLogger('engineio').setLevel(logging.WARNING)
 
-
 class MetricsNamespace(Namespace):
     '''Socket.IO namespace for set/retrieve metrics of sensors'''
     @staticmethod
@@ -343,8 +342,9 @@ def metrics():
     return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
 
 
-# start http server
 def run_server():
+    '''start a http server'''
+
     sensors.scheduler.start()
     try:
         sensors.load_config(pars)
@@ -352,10 +352,10 @@ def run_server():
         logger.error(exc)
         sys.exit(1)
 
-    logger.info("HTTP server listen %s:%s", pars.addr, pars.port)
+    logger.info("HTTP server `listen %s:%s", pars.listen_addr, pars.listen_port)
     dlog = LoggingLogAdapter(logger, level=logging.DEBUG)
     errlog = LoggingLogAdapter(logger, level=logging.ERROR)
-    http_server = WSGIServer((pars.addr, pars.port),
+    http_server = WSGIServer((pars.listen_addr, pars.listen_port),
                              app,
                              log=dlog,
                              error_log=errlog,

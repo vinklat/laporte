@@ -660,11 +660,11 @@ class Sensors():
 
     def load_config(self, pars):
         try:
-            with open(pars.sensors_fname, 'r') as stream:
-                if pars.jinja2:
+            with open(pars.config_file, 'r') as stream:
+                if pars.config_jinja:
                     # load jinja2
                     t = Environment(
-                        loader=FileSystemLoader(pars.sensors_dir)).from_string(
+                        loader=FileSystemLoader(pars.config_dir)).from_string(
                             stream.read())
                     # load yaml
                     config_dict = safe_load(t.render())
