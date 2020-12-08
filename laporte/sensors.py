@@ -456,8 +456,7 @@ class Sensors():
                     if ttl_end_job:
                         diff[node_id][sensor_id]['exp_timestamp'] = None
 
-                for metric in metrics:
-                    if sensor.mode == ACTUATOR and metric == 'value':
+                if metrics and sensor.mode == ACTUATOR:
                         if sensor.gw not in actuator_id_values:
                             actuator_id_values[sensor.gw] = {}
                         if node_id not in actuator_id_values[sensor.gw]:
@@ -565,8 +564,8 @@ class Sensors():
                 vars_dict = self.__get_sensor_required_vars_dict(sensor)
                 sensor.do_eval(vars_dict=vars_dict, update=False)
 
-            self.__do_requiring_eval(sensor)
-            self.__used_dataset_reset()
+        self.__do_requiring_eval(sensor)
+        self.__used_dataset_reset()
         changes = self.__get_changed_nodes_dict()
         self.final_changes_processing(changes, call_after_expire=True)
 
