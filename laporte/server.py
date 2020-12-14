@@ -19,6 +19,7 @@ from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from laporte.version import __version__, get_build_info
 from laporte.argparser import get_pars
 from laporte.sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
+from laporte.prometheus import PrometheusMetrics
 
 # create logger
 logger = logging.getLogger(__name__)
@@ -37,11 +38,19 @@ else:
     logging.getLogger('socketio').setLevel(logging.WARNING)
     logging.getLogger('engineio').setLevel(logging.WARNING)
 
+# create container objects
+sensors = Sensors()
+metrics = PrometheusMetrics(sensors)
+
+
 class MetricsNamespace(Namespace):
     '''Socket.IO namespace for set/retrieve metrics of sensors'''
     @staticmethod
+    @metrics.func_measure({'event': 'sensor_response', 'namespace': '/metric'})
     def on_sensor_response(message):
-        '''receive metrics of changed sensors identified by node_id/sensor_id'''
+        '''
+        receive metrics of changed sensors identified by node_id/sensor_id
+        '''
 
         for node_id in message:
             request_form = message[node_id]
@@ -53,6 +62,10 @@ class MetricsNamespace(Namespace):
                 pass
 
     @staticmethod
+    @metrics.func_measure({
+        'event': 'sensor_addr_response',
+        'namespace': '/metric'
+    })
     def on_sensor_addr_response(message):
         '''receive metrics of changed sensors identified by node_addr/key'''
 
@@ -66,6 +79,7 @@ class MetricsNamespace(Namespace):
                 pass
 
     @staticmethod
+    @metrics.func_measure({'event': 'join', 'namespace': '/metric'})
     def on_join(message):
         '''fired upon gateway join'''
 
@@ -79,6 +93,8 @@ class MetricsNamespace(Namespace):
 class EventsNamespace(Namespace):
     '''Socket.IO namespace for events emit'''
     @staticmethod
+    @metrics.func_count({'event': 'connect', 'namespace': '/events'})
+    @metrics.func_measure({'event': 'connect', 'namespace': '/events'})
     def on_connect():
         '''emit initital event after a successful connection'''
 
@@ -90,6 +106,7 @@ class EventsNamespace(Namespace):
 class DefaultNamespace(Namespace):
     '''Socket.IO namespace for default responses'''
     @staticmethod
+    @metrics.func_measure({'event': 'connect', 'namespace': '/'})
     def on_connect():
         '''fired upon a successful connection'''
 
@@ -101,10 +118,9 @@ app = Flask(__name__)
 blueprint = Blueprint('api', __name__, url_prefix='/api')
 api = Api(blueprint, doc='/', title='Laporte API', version=__version__)
 bootstrap = Bootstrap(app)
-sensors = Sensors()
 app.config.SWAGGER_UI_DOC_EXPANSION = 'list'
 app.register_blueprint(blueprint)
-REGISTRY.register(sensors.CustomCollector(sensors))
+REGISTRY.register(metrics.CustomCollector(metrics))
 sio = SocketIO(app, async_mode='gevent', engineio_logger=True)
 sio.on_namespace(DefaultNamespace('/'))
 sio.on_namespace(MetricsNamespace(METRICS_NAMESPACE))
@@ -139,6 +155,10 @@ class NodeMetrics(Resource):
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     @api.expect(parser)
+    @metrics.func_measure({
+        'method': 'put',
+        'location': '/api/metrics/<node_id>'
+    })
     def put(self, node_id):
         '''set sensors of a node'''
         logger.info("API/set: %s: %s", node_id, str(request.form.to_dict()))
@@ -153,6 +173,10 @@ class NodeMetrics(Resource):
     @api.doc(params={'node_id': 'a node from which to get metrics'})
     @api.response(200, 'Success')
     @api.response(404, 'Node not found')
+    @metrics.func_measure({
+        'method': 'get',
+        'location': '/api/metrics/<node_id>'
+    })
     def get(self, node_id):
         '''get sensor metrics of a node'''
 
@@ -171,6 +195,10 @@ class IncNodeMetrics(Resource):
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     @api.expect(parser)
+    @metrics.func_measure({
+        'method': 'put',
+        'location': '/api/metrics/inc/<node_id>'
+    })
     def put(self, node_id):
         '''increment sensor values of a node'''
         logger.info("API/inc: %s: %s", node_id, str(request.form.to_dict()))
@@ -194,6 +222,10 @@ class SensorMetrics(Resource):
         })
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
+    @metrics.func_measure({
+        'method': 'get',
+        'location': '/api/metrics/<node_id>/<sensor_id>'
+    })
     def get(self, search_node_id, search_sensor_id):
         '''get metrics of one sensor'''
 
@@ -305,6 +337,7 @@ class InfoIP(Resource):
 
 @app.route('/')
 @app.route('/sensors')
+@metrics.func_measure({'location': '/sensors'})
 def table():
     return render_template('sensors.html',
                            time_locale=pars.time_locale,
@@ -313,6 +346,7 @@ def table():
 
 
 @app.route('/scheduler')
+@metrics.func_measure({'location': '/scheduler'})
 def scheduler():
     return render_template('scheduler.html',
                            time_locale=pars.time_locale,
@@ -338,7 +372,7 @@ def prom():
 
 # Prometheus metrics
 @app.route('/metrics')
-def metrics():
+def prom_metrics():
     return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
 
 

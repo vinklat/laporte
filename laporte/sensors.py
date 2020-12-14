@@ -6,7 +6,6 @@ import json
 from datetime import datetime, timedelta
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateNotFound
 from yaml import safe_load, YAMLError
-from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily, InfoMetricFamily
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
 from laporte.version import __version__
@@ -457,21 +456,21 @@ class Sensors():
                         diff[node_id][sensor_id]['exp_timestamp'] = None
 
                 if metrics and sensor.mode == ACTUATOR:
-                        if sensor.gw not in actuator_id_values:
-                            actuator_id_values[sensor.gw] = {}
-                        if node_id not in actuator_id_values[sensor.gw]:
-                            actuator_id_values[sensor.gw][node_id] = {}
-                        actuator_id_values[
-                            sensor.gw][node_id][sensor_id] = sensor.value
-                        if (sensor.node_addr != '') and (sensor.key != ''):
-                            if sensor.gw not in actuator_addr_values:
-                                actuator_addr_values[sensor.gw] = {}
-                            if sensor.node_addr not in actuator_addr_values[
-                                    sensor.gw]:
-                                actuator_addr_values[sensor.gw][
-                                    sensor.node_addr] = {}
-                            actuator_addr_values[sensor.gw][sensor.node_addr][
-                                sensor.key] = sensor.value
+                    if sensor.gw not in actuator_id_values:
+                        actuator_id_values[sensor.gw] = {}
+                    if node_id not in actuator_id_values[sensor.gw]:
+                        actuator_id_values[sensor.gw][node_id] = {}
+                    actuator_id_values[
+                        sensor.gw][node_id][sensor_id] = sensor.value
+                    if (sensor.node_addr != '') and (sensor.key != ''):
+                        if sensor.gw not in actuator_addr_values:
+                            actuator_addr_values[sensor.gw] = {}
+                        if sensor.node_addr not in actuator_addr_values[
+                                sensor.gw]:
+                            actuator_addr_values[sensor.gw][
+                                sensor.node_addr] = {}
+                        actuator_addr_values[sensor.gw][sensor.node_addr][
+                            sensor.key] = sensor.value
 
         logging.info('final changes: %s', diff)
         self.sio.emit('update_response',
@@ -568,55 +567,6 @@ class Sensors():
         self.__used_dataset_reset()
         changes = self.__get_changed_nodes_dict()
         self.final_changes_processing(changes, call_after_expire=True)
-
-    class CustomCollector():
-        def __init__(self, inner_sensors):
-            self.sensors = inner_sensors
-
-        def collect(self):
-            EXPORTER_NAME = 'laporte'
-
-            # add laporte versison at first
-            d = {
-                "0":
-                InfoMetricFamily(EXPORTER_NAME,
-                                 'help',
-                                 value={'version': __version__})
-            }
-
-            for sensor in self.sensors.sensor_index:
-                if sensor.export_hidden:
-                    continue
-
-                for (name, metric_type, value, labels, labels_data,
-                     prefix) in sensor.get_promexport_data():
-                    uniqname = name + '_' + '_'.join(labels)
-                    if not uniqname in d:
-                        if prefix is None:
-                            metric_name = '{}_{}'.format(EXPORTER_NAME, name)
-                        elif prefix == "":
-                            metric_name = name
-                        else:
-                            metric_name = '{}_{}'.format(prefix, name)
-
-                        if metric_type == COUNTER:
-                            x = CounterMetricFamily(metric_name,
-                                                    'with labels: ' +
-                                                    ', '.join(labels),
-                                                    labels=labels)
-                        else:
-                            x = GaugeMetricFamily(metric_name,
-                                                  'with labels: ' +
-                                                  ', '.join(labels),
-                                                  labels=labels)
-                        d[uniqname] = x
-                    else:
-                        x = d[uniqname]
-
-                    x.add_metric(labels_data, value)
-
-            for q in sorted(d, key=str.lower):
-                yield d[q]
 
     def get_parser_arguments(self):
 
