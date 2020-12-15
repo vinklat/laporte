@@ -3,7 +3,7 @@
 
 # pylint: disable=wrong-import-position, wrong-import-order, ungrouped-imports
 from gevent import monkey
-monkey.patch_all()
+monkey.patch_all()  # nopep8
 import logging
 import sys
 import json
@@ -28,8 +28,7 @@ logger = logging.getLogger(__name__)
 pars = get_pars()
 
 # set logger
-logging.basicConfig(format='%(levelname)s %(module)s: %(message)s',
-                    level=pars.log_level)
+logging.basicConfig(format='%(levelname)s %(module)s: %(message)s', level=pars.log_level)
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
 if pars.log_level == logging.DEBUG:
     logging.getLogger('socketio').setLevel(logging.DEBUG)
@@ -62,17 +61,13 @@ class MetricsNamespace(Namespace):
                 pass
 
     @staticmethod
-    @metrics.func_measure({
-        'event': 'sensor_addr_response',
-        'namespace': '/metric'
-    })
+    @metrics.func_measure({'event': 'sensor_addr_response', 'namespace': '/metric'})
     def on_sensor_addr_response(message):
         '''receive metrics of changed sensors identified by node_addr/key'''
 
-        for node_id, request_form in sensors.conv_addrs_to_ids(
-                message).items():
-            logger.info('SocketIO translated message: node_id=%s: data=%s',
-                        node_id, str(request_form))
+        for node_id, request_form in sensors.conv_addrs_to_ids(message).items():
+            logger.info('SocketIO translated message: node_id=%s: data=%s', node_id,
+                        str(request_form))
             try:
                 sensors.set_node_values(node_id, request_form)
             except KeyError:
@@ -155,10 +150,7 @@ class NodeMetrics(Resource):
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     @api.expect(parser)
-    @metrics.func_measure({
-        'method': 'put',
-        'location': '/api/metrics/<node_id>'
-    })
+    @metrics.func_measure({'method': 'put', 'location': '/api/metrics/<node_id>'})
     def put(self, node_id):
         '''set sensors of a node'''
         logger.info("API/set: %s: %s", node_id, str(request.form.to_dict()))
@@ -173,10 +165,7 @@ class NodeMetrics(Resource):
     @api.doc(params={'node_id': 'a node from which to get metrics'})
     @api.response(200, 'Success')
     @api.response(404, 'Node not found')
-    @metrics.func_measure({
-        'method': 'get',
-        'location': '/api/metrics/<node_id>'
-    })
+    @metrics.func_measure({'method': 'get', 'location': '/api/metrics/<node_id>'})
     def get(self, node_id):
         '''get sensor metrics of a node'''
 
@@ -195,17 +184,12 @@ class IncNodeMetrics(Resource):
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     @api.expect(parser)
-    @metrics.func_measure({
-        'method': 'put',
-        'location': '/api/metrics/inc/<node_id>'
-    })
+    @metrics.func_measure({'method': 'put', 'location': '/api/metrics/inc/<node_id>'})
     def put(self, node_id):
         '''increment sensor values of a node'''
         logger.info("API/inc: %s: %s", node_id, str(request.form.to_dict()))
         try:
-            ret = sensors.set_node_values(node_id,
-                                          request.form,
-                                          increment=True)
+            ret = sensors.set_node_values(node_id, request.form, increment=True)
         except KeyError:
             logger.warning("node %s or sensor not found", node_id)
             abort(404)  # sensor not configured
@@ -230,9 +214,7 @@ class SensorMetrics(Resource):
         '''get metrics of one sensor'''
 
         try:
-            ret = dict(
-                sensors.get_metrics_of_sensor(search_node_id,
-                                              search_sensor_id))
+            ret = dict(sensors.get_metrics_of_sensor(search_node_id, search_sensor_id))
         except KeyError:
             logger.warning("node %s or sensor %s not found", search_node_id,
                            search_sensor_id)

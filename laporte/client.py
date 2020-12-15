@@ -16,8 +16,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 c_responses_total = Counter('laporte_responses_total',
                             'Total count of Socket.IO responses',
                             ['response', 'namespace'])
-c_emits_total = Counter('laporte_emits_total',
-                        'Total count of Socket.IO emits',
+c_emits_total = Counter('laporte_emits_total', 'Total count of Socket.IO emits',
                         ['response', 'namespace'])
 c_connects_total = Counter('laporte_connects_total',
                            'Total count of connects/reconnects', ['service'])
@@ -33,16 +32,15 @@ class MetricsNamespace(socketio.ClientNamespace):
         '''default function launched upon an actuator response node_id/sensor_id'''
 
         del sensors  # Ignored parameter
-        logging.debug("empty default_actuator_handler for %s in %s", node_id,
-                      gateway)
+        logging.debug("empty default_actuator_handler for %s in %s", node_id, gateway)
 
     @staticmethod
     def default_actuator_addr_handler(gateway, node_addr, keys):
         '''default function launched upon an actuator response node_addr/key'''
 
         del keys  # Ignored parameter
-        logging.debug("empty default_actuator_addr_handler for %s in %s",
-                      node_addr, gateway)
+        logging.debug("empty default_actuator_addr_handler for %s in %s", node_addr,
+                      gateway)
 
     @staticmethod
     def default_config_handler(data):
@@ -66,8 +64,7 @@ class MetricsNamespace(socketio.ClientNamespace):
     def on_actuator_addr_response(self, data):
         '''receive metrics of changed actuators identified by node_addr/key'''
 
-        c_responses_total.labels('actuator_addr_response',
-                                 METRICS_NAMESPACE).inc()
+        c_responses_total.labels('actuator_addr_response', METRICS_NAMESPACE).inc()
         for gateway, nodes in json.loads(data).items():
             for node_addr, keys in nodes.items():
                 self.actuator_addr_handler(gateway, node_addr, keys)
@@ -83,8 +80,7 @@ class MetricsNamespace(socketio.ClientNamespace):
         '''receive and log status message from laporte'''
 
         c_responses_total.labels('status_response', METRICS_NAMESPACE).inc()
-        logging.info("Laporte %s namespace status response: %s",
-                     METRICS_NAMESPACE, data)
+        logging.info("Laporte %s namespace status response: %s", METRICS_NAMESPACE, data)
 
     def __join_gateways(self):
         '''join Socket.IO rooms called as same as gateways'''
@@ -129,9 +125,8 @@ class EventsNamespace(socketio.ClientNamespace):
                 dict of sensor_ids with dicts of changed metrics
         '''
 
-        logging.debug(
-            "empty default_update_handler for %s with %s chenged metrics",
-            node_id, len(sensors))
+        logging.debug("empty default_update_handler for %s with %s chenged metrics",
+                      node_id, len(sensors))
 
     init_handler = default_init_handler
     update_handler = default_update_handler
@@ -154,8 +149,7 @@ class EventsNamespace(socketio.ClientNamespace):
         '''receive and log status message from laporte'''
 
         c_responses_total.labels('status_response', EVENTS_NAMESPACE).inc()
-        logging.info("Laporte %s namespace status response: %s",
-                     METRICS_NAMESPACE, data)
+        logging.info("Laporte %s namespace status response: %s", METRICS_NAMESPACE, data)
 
 
 class DefaultNamespace(socketio.ClientNamespace):

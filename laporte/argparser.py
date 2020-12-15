@@ -119,9 +119,8 @@ def get_pars():
                         action='store',
                         dest='log_level',
                         help='set the logging output level. '
-                        '{0} (default {1})'.format(
-                            _LOG_LEVEL_STRINGS,
-                            env_vars['LOG_LEVEL']['default']),
+                        '{0} (default {1})'.format(_LOG_LEVEL_STRINGS,
+                                                   env_vars['LOG_LEVEL']['default']),
                         type=log_level_string_to_int,
                         **env_vars['LOG_LEVEL'])
     return parser.parse_args()

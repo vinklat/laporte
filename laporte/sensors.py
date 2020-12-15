@@ -4,7 +4,7 @@
 import logging
 import json
 from datetime import datetime, timedelta
-from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError, TemplateNotFound
+from jinja2 import (Environment, FileSystemLoader, TemplateSyntaxError, TemplateNotFound)
 from yaml import safe_load, YAMLError
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
@@ -19,8 +19,7 @@ METRICS_NAMESPACE = '/metrics'
 EVENTS_NAMESPACE = '/events'
 
 METRICS = {
-    'value', 'hits_total', 'hit_timestamp', 'duration_seconds', 'ttl_job',
-    'cron_jobs'
+    'value', 'hits_total', 'hit_timestamp', 'duration_seconds', 'ttl_job', 'cron_jobs'
 }
 SETUP = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
 
@@ -57,18 +56,15 @@ class Sensors():
             'mode': mode
         }
 
-        for p in [
-                'default', 'debounce', 'ttl', 'eval', 'group', 'desc', 'cron',
-                'key'
-        ]:
+        for p in ['default', 'debounce', 'ttl', 'eval', 'group', 'desc', 'cron', 'key']:
             if p in sensor_parent_config_dict:
-                #note: only ttl should pass now
+                # note: only ttl should pass now
                 param[p] = sensor_parent_config_dict[p]
 
             if p in sensor_config_dict:
                 param[p] = sensor_config_dict[p]
 
-        for p in ['export']:  #only export at this time
+        for p in ['export']:  # only export at this time
             if p in sensor_parent_config_dict:
                 param['parent_' + p] = sensor_parent_config_dict[p]
 
@@ -125,8 +121,7 @@ class Sensors():
 
         for key, mode in {'sensors': SENSOR, 'actuators': ACTUATOR}.items():
             if key in node_config_dict:
-                for sensor_id, sensor_config_dict in node_config_dict[
-                        key].items():
+                for sensor_id, sensor_config_dict in node_config_dict[key].items():
                     self.__add_sensor(gw,
                                       node_id,
                                       node_addr,
@@ -161,13 +156,12 @@ class Sensors():
                     raise TypeError
 
                 job = self.scheduler.add_job(func=self.sensor_cron_trigger,
-                                             trigger=CronTrigger(
-                                                 month=month,
-                                                 day=day,
-                                                 day_of_week=day_of_week,
-                                                 hour=hour,
-                                                 minute=minute,
-                                                 second=second),
+                                             trigger=CronTrigger(month=month,
+                                                                 day=day,
+                                                                 day_of_week=day_of_week,
+                                                                 hour=hour,
+                                                                 minute=minute,
+                                                                 second=second),
                                              args=[sensor, value])
                 logging.debug("scheduler: add %s", job)
                 if not isinstance(sensor.cron_jobs, list):
@@ -192,8 +186,7 @@ class Sensors():
 
     def get_metrics_of_node(self, node_id):
         for sensor_id, sensor in self.node_id_index[node_id].items():
-            yield sensor_id, dict(
-                sensor.get_data(skip_None=False, selected=METRICS))
+            yield sensor_id, dict(sensor.get_data(skip_None=False, selected=METRICS))
 
     def get_metrics(self, skip_None=True):
         for node_id in self.node_id_index:
@@ -205,43 +198,42 @@ class Sensors():
         ret = {}
         for node_id, sensor_id, data in self.get_metrics(skip_None=skip_None):
             gw = self.__get_sensor(node_id, sensor_id).gw
-            if not gw in ret:
+            if gw not in ret:
                 ret[gw] = {}
-            if not node_id in ret[gw]:
+            if node_id not in ret[gw]:
                 ret[gw][node_id] = {}
-            if not sensor_id in ret[gw][node_id]:
+            if sensor_id not in ret[gw][node_id]:
                 ret[gw][node_id][sensor_id] = data
         return ret
 
     def get_metrics_dict_by_node(self, skip_None=True):
         ret = {}
         for node_id, sensor_id, data in self.get_metrics(skip_None=skip_None):
-            if not node_id in ret:
+            if node_id not in ret:
                 ret[node_id] = {}
-            if not sensor_id in ret[node_id]:
+            if sensor_id not in ret[node_id]:
                 ret[node_id][sensor_id] = data
         return ret
 
     def get_metrics_dict_by_sensor(self, skip_None=True):
         ret = {}
         for node_id, sensor_id, data in self.get_metrics(skip_None=skip_None):
-            if not sensor_id in ret:
+            if sensor_id not in ret:
                 ret[sensor_id] = {}
-            if not node_id in ret[sensor_id]:
+            if node_id not in ret[sensor_id]:
                 ret[sensor_id][node_id] = data
         return ret
 
     def get_sensors_dump_dict(self):
         ret = {}
         for sensor in self.sensor_index:
-            if not sensor.gw in ret:
+            if sensor.gw not in ret:
                 ret[sensor.gw] = {}
 
-            if not sensor.node_id in ret[sensor.gw]:
+            if sensor.node_id not in ret[sensor.gw]:
                 ret[sensor.gw][sensor.node_id] = {}
 
-            ret[sensor.gw][sensor.node_id][sensor.sensor_id] = dict(
-                sensor.get_data())
+            ret[sensor.gw][sensor.node_id][sensor.sensor_id] = dict(sensor.get_data())
         return ret
 
     def get_config_of_gw(self, gw):
@@ -263,18 +255,19 @@ class Sensors():
             second = self.get_metrics_dict_by_node(skip_None=False)
 
         for key in first:
-            if first[key] != second[key]:  #changed
+            if first[key] != second[key]:  # changed
                 if level < 2:
-                    changed[key] = self.__get_changed_nodes_dict(
-                        first=first[key], second=second[key], level=level + 1)
+                    changed[key] = self.__get_changed_nodes_dict(first=first[key],
+                                                                 second=second[key],
+                                                                 level=level + 1)
                 else:
                     changed[key] = second[key]
 
         for key in second:
-            if not key in first:  #added
+            if key not in first:  # added
                 if level < 2:
-                    changed[key] = self.__get_changed_nodes_dict(
-                        second=second[key], level=level + 1)
+                    changed[key] = self.__get_changed_nodes_dict(second=second[key],
+                                                                 level=level + 1)
                 else:
                     changed[key] = second[key]
 
@@ -296,21 +289,19 @@ class Sensors():
                         (sensor_id, metric_name) = tuple(metric_list)
                         node_id = sensor.node_id
                     else:
-                        logging.error("%s.%s: error in eval_require %s",
-                                      node_id, sensor_id, sensor.eval_require)
+                        logging.error("%s.%s: error in eval_require %s", node_id,
+                                      sensor_id, sensor.eval_require)
                         return {}
 
                     search_sensor = self.__get_sensor(node_id, sensor_id)
 
                     if search_sensor.debounce_dataset and not search_sensor.dataset_ready:
-                        logging.debug(
-                            "skip eval %s.%s: not ready %s.%s in dataset",
-                            sensor.node_id, sensor.sensor_id,
-                            search_sensor.node_id, search_sensor.sensor_id)
+                        logging.debug("skip eval %s.%s: not ready %s.%s in dataset",
+                                      sensor.node_id, sensor.sensor_id,
+                                      search_sensor.node_id, search_sensor.sensor_id)
                         return {}
 
-                    value = next(
-                        search_sensor.get_data(selected={metric_name}))[1]
+                    value = next(search_sensor.get_data(selected={metric_name}))[1]
 
                     if value is not None:
                         ret[var] = value
@@ -318,15 +309,13 @@ class Sensors():
                     else:
                         return {}
             except KeyError:
-                logging.debug(
-                    "skip eval %s.%s: required sensor %s.%s not found",
-                    sensor.node_id, sensor.sensor_id, node_id, sensor_id)
+                logging.debug("skip eval %s.%s: required sensor %s.%s not found",
+                              sensor.node_id, sensor.sensor_id, node_id, sensor_id)
                 return {}
             except StopIteration:
-                logging.debug(
-                    "skip eval %s.%s: required metric %s of %s.%s not found",
-                    sensor.node_id, sensor.sensor_id, metric_name, node_id,
-                    sensor_id)
+                logging.debug("skip eval %s.%s: required metric %s of %s.%s not found",
+                              sensor.node_id, sensor.sensor_id, metric_name, node_id,
+                              sensor_id)
                 return {}
 
         for s in used_list:
@@ -344,11 +333,10 @@ class Sensors():
                         (node_id, sensor_id,
                          _) = tuple(metric_list)  # unused metric_name
                     elif len(metric_list) == 2:
-                        (sensor_id,
-                         _) = tuple(metric_list)  # unused metric_name
+                        (sensor_id, _) = tuple(metric_list)  # unused metric_name
                         node_id = s.node_id
 
-                    if node_id == sensor.node_id and sensor_id == sensor.sensor_id and not s in x:
+                    if node_id == sensor.node_id and sensor_id == sensor.sensor_id and s not in x:
                         x.add(s)
                         yield s
 
@@ -380,8 +368,8 @@ class Sensors():
         called from scheduler when cron time has come
         '''
 
-        logging.info("scheduller run: %s.%s cron time has come",
-                     sensor.node_id, sensor.sensor_id)
+        logging.info("scheduller run: %s.%s cron time has come", sensor.node_id,
+                     sensor.sensor_id)
 
         # set the same value if None / null
         if value is None:
@@ -424,13 +412,13 @@ class Sensors():
             for sensor_id, metrics in diff[node_id].items():
                 sensor = self.__get_sensor(node_id, sensor_id)
 
-                if isinstance(sensor.ttl, int) and isinstance(
-                        sensor.hit_timestamp, float):
+                if isinstance(sensor.ttl, int) and isinstance(sensor.hit_timestamp,
+                                                              float):
 
                     ttl_add_job = True
                     ttl_end_job = False
-                    if not sensor.default_return_ttl and (
-                            sensor.value == sensor.default_value):
+                    if not sensor.default_return_ttl and (sensor.value
+                                                          == sensor.default_value):
                         ttl_add_job = False
                         if sensor.value != sensor.prev_value:
                             ttl_end_job = True
@@ -440,17 +428,15 @@ class Sensors():
 
                     if ttl_add_job:
                         ttl_time = datetime.fromtimestamp(
-                            sensor.hit_timestamp) + timedelta(
-                                seconds=sensor.ttl)
+                            sensor.hit_timestamp) + timedelta(seconds=sensor.ttl)
                         sensor.ttl_job = self.scheduler.add_job(
                             func=self.sensor_expire,
                             trigger=DateTrigger(run_date=ttl_time),
                             id='exp-{}-{}'.format(node_id, sensor_id),
                             args=[sensor],
                             replace_existing=True)
-                        diff[node_id][sensor_id][
-                            'exp_timestamp'] = datetime.timestamp(
-                                sensor.ttl_job.next_run_time)
+                        diff[node_id][sensor_id]['exp_timestamp'] = datetime.timestamp(
+                            sensor.ttl_job.next_run_time)
 
                     if ttl_end_job:
                         diff[node_id][sensor_id]['exp_timestamp'] = None
@@ -460,22 +446,17 @@ class Sensors():
                         actuator_id_values[sensor.gw] = {}
                     if node_id not in actuator_id_values[sensor.gw]:
                         actuator_id_values[sensor.gw][node_id] = {}
-                    actuator_id_values[
-                        sensor.gw][node_id][sensor_id] = sensor.value
+                    actuator_id_values[sensor.gw][node_id][sensor_id] = sensor.value
                     if (sensor.node_addr != '') and (sensor.key != ''):
                         if sensor.gw not in actuator_addr_values:
                             actuator_addr_values[sensor.gw] = {}
-                        if sensor.node_addr not in actuator_addr_values[
-                                sensor.gw]:
-                            actuator_addr_values[sensor.gw][
-                                sensor.node_addr] = {}
+                        if sensor.node_addr not in actuator_addr_values[sensor.gw]:
+                            actuator_addr_values[sensor.gw][sensor.node_addr] = {}
                         actuator_addr_values[sensor.gw][sensor.node_addr][
                             sensor.key] = sensor.value
 
         logging.info('final changes: %s', diff)
-        self.sio.emit('update_response',
-                      json.dumps(diff),
-                      namespace=EVENTS_NAMESPACE)
+        self.sio.emit('update_response', json.dumps(diff), namespace=EVENTS_NAMESPACE)
 
         if actuator_id_values:
             for gateway, data in actuator_id_values.items():
@@ -516,8 +497,7 @@ class Sensors():
                         ret[sensor.node_id] = {}
                     ret[sensor.node_id][sensor.sensor_id] = value
                 else:
-                    logging.warning("sensor %s:%s not found in node",
-                                    node_addr, key)
+                    logging.warning("sensor %s:%s not found in node", node_addr, key)
         return ret
 
     def set_node_values(self, node_id, sensor_values_dict, increment=False):
@@ -526,8 +506,8 @@ class Sensors():
         for sensor_id in sensor_values_dict:
 
             # create new node if there is a template
-            if (not node_id in self.node_id_index) and (
-                    sensor_id in self.sensor_template_index):
+            if (node_id not in self.node_id_index) and (sensor_id
+                                                        in self.sensor_template_index):
                 logging.debug("setup new node %s from template.", node_id)
                 self.node_id_index[node_id] = {}
                 t = self.sensor_template_index[sensor_id]

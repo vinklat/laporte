@@ -7,7 +7,8 @@ import logging
 from operator import itemgetter
 from time import time
 from functools import wraps
-from prometheus_client.core import (InfoMetricFamily, GaugeMetricFamily, CounterMetricFamily, SummaryMetricFamily)
+from prometheus_client.core import (InfoMetricFamily, GaugeMetricFamily,
+                                    CounterMetricFamily, SummaryMetricFamily)
 from laporte.sensor import COUNTER
 from laporte.version import __version__
 
@@ -35,13 +36,18 @@ class PrometheusMetrics:
                 try:
                     return func(*args, **kwargs)
                 finally:
-                    labels_key = 'duration_' + str(list(map(itemgetter(0), labels.items())))
+                    labels_key = 'duration_' + str(
+                        list(map(itemgetter(0), labels.items())))
                     values_key = str(list(map(itemgetter(1), labels.items())))
 
                     if labels_key not in self.durations:
                         self.durations[labels_key] = {}
                     if values_key not in self.durations[labels_key]:
-                        self.durations[labels_key][values_key] = {'count': 0, 'sum': 0.0, 'labels': labels}
+                        self.durations[labels_key][values_key] = {
+                            'count': 0,
+                            'sum': 0.0,
+                            'labels': labels
+                        }
 
                     duration = time() - start_t
                     logging.debug("duration: %fs", duration)
@@ -86,7 +92,12 @@ class PrometheusMetrics:
         def collect(self):
 
             # laporte version info
-            families = {"0": InfoMetricFamily(EXPORTER_NAME, 'Laporte version', value={'version': __version__})}
+            families = {
+                "0":
+                InfoMetricFamily(EXPORTER_NAME,
+                                 'Laporte version',
+                                 value={'version': __version__})
+            }
 
             # dump stored durations
             for labels_key, labels_data in self.metrics.durations.items():
@@ -100,7 +111,8 @@ class PrometheusMetrics:
 
                         met = SummaryMetricFamily(EXPORTER_NAME + '_duration_seconds',
                                                   'counter and duration of runs of '
-                                                  'function with labels ' + str(label_keys),
+                                                  'function with labels ' +
+                                                  str(label_keys),
                                                   labels=label_keys)
                         families[labels_key] = met
                     else:
@@ -119,7 +131,8 @@ class PrometheusMetrics:
                         label_keys = list(map(itemgetter(0), labels.items()))
 
                         met = CounterMetricFamily(EXPORTER_NAME + '_count_total',
-                                                  'counter of something with labels ' + str(label_keys),
+                                                  'counter of something with labels ' +
+                                                  str(label_keys),
                                                   labels=label_keys)
                         families[labels_key] = met
                     else:
@@ -133,7 +146,8 @@ class PrometheusMetrics:
                 if sensor.export_hidden:
                     continue
 
-                for (name, metric_type, value, labels, labels_data, prefix) in sensor.get_promexport_data():
+                for (name, metric_type, value, labels, labels_data,
+                     prefix) in sensor.get_promexport_data():
                     uniqname = name + '_' + '_'.join(labels)
                     if uniqname not in families:
                         if prefix is None:
@@ -144,9 +158,13 @@ class PrometheusMetrics:
                             metric_name = '{}_{}'.format(prefix, name)
 
                         if metric_type == COUNTER:
-                            x = CounterMetricFamily(metric_name, 'with labels: ' + ', '.join(labels), labels=labels)
+                            x = CounterMetricFamily(metric_name,
+                                                    'with labels: ' + ', '.join(labels),
+                                                    labels=labels)
                         else:
-                            x = GaugeMetricFamily(metric_name, 'with labels: ' + ', '.join(labels), labels=labels)
+                            x = GaugeMetricFamily(metric_name,
+                                                  'with labels: ' + ', '.join(labels),
+                                                  labels=labels)
                         families[uniqname] = x
                     else:
                         x = families[uniqname]
