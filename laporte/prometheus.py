@@ -25,7 +25,7 @@ class PrometheusMetrics:
     def __init__(self, sensors):
         self.sensors = sensors
 
-    def func_measure(self, labels):
+    def func_measure(self, labels, log=False):
         '''
         update duration (summary) of any function with this decorator is called
         '''
@@ -50,17 +50,19 @@ class PrometheusMetrics:
                         }
 
                     duration = time() - start_t
-                    logging.debug("duration: %fs", duration)
-
                     self.durations[labels_key][values_key]['count'] += 1
                     self.durations[labels_key][values_key]['sum'] += duration
+                    if log:
+                        logging.debug("duration %s: %0.4fs", labels, duration)
 
             return _time_it
 
         return decorator
 
     def func_count(self, labels):
-        '''update number of times any function with this decorator is called'''
+        '''
+        update number of times any function with this decorator is called
+        '''
         def decorator(func):
             @wraps(func)
             def _inc_count(*args, **kwargs):
@@ -74,7 +76,9 @@ class PrometheusMetrics:
         return decorator
 
     def counter_inc(self, labels):
-        '''update counter'''
+        '''
+        update counter
+        '''
         labels_key = 'counts_' + str(list(map(itemgetter(0), labels.items())))
         values_key = str(list(map(itemgetter(1), labels.items())))
 

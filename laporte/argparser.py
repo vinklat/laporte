@@ -50,6 +50,9 @@ def get_pars():
         'LOG_LEVEL': {
             'default': 'DEBUG'
         },
+        'LOG_VERBOSE': {
+            'default': False
+        },
     }
 
     for env_var, env_pars in env_vars.items():
@@ -123,4 +126,11 @@ def get_pars():
                                                    env_vars['LOG_LEVEL']['default']),
                         type=log_level_string_to_int,
                         **env_vars['LOG_LEVEL'])
+    parser.add_argument('-v',
+                        '--log-verbose',
+                        action='store_true',
+                        dest='log_verbose',
+                        help='most verbose debug level '
+                        '(console only; useful for a bug hunt :)',
+                        **env_vars['LOG_VERBOSE'])
     return parser.parse_args()
