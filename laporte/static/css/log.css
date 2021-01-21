@@ -1,0 +1,65 @@
+html {
+    --lh: 1.5em;
+}
+
+.w-5 {
+    width: 5%;
+}
+
+.w-10 {
+    width: 10%;
+}
+
+.w-80 {
+    width: 80%;
+}
+
+.table {
+    border-collapse: separate;
+    border-spacing: 0;  
+}
+
+.bg-light th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.sticky-header th{
+    position:sticky;
+    top: 0;
+}
+
+nav.sticky-top + main table.sticky-header th {
+    top: 55px;
+    border-top: 2px solid #dee2e6;
+}
+
+.truncate-overflow {
+    --max-lines: 4;
+    position: relative;
+    max-height: calc(var(--lh) * var(--max-lines));
+    overflow: hidden;
+}
+
+.truncate-overflow:hover {
+    cursor:pointer;
+    background: linear-gradient(to right, #f1f1f1, rgba(238, 238,238, 0) 100%);
+}
+
+.truncate-overflow:hover::after {
+    content: "...more";
+    background: linear-gradient(to right, rgba(255, 255, 255, .4), white 100%);
+    text-align: right;
+    color: var(--primary);
+
+}
+
+.truncate-overflow::after {
+    content: "";
+    position: absolute;
+    width: 30%;
+    height: var(--lh);
+    top: calc(var(--lh) * calc(var(--max-lines) - 1));
+    right: 0;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), white 100%);
+}

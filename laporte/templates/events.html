@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
-
-{% block title %}log{% endblock %}
+{% block title %}events{% endblock %}
 {% block styles %}
 {{super()}}
 <!-- Logs CSS -->
@@ -13,8 +12,7 @@
         <tr>
             <th class="w-10" scope="col">time</th>
             <th class="w-10" scope="col">event id</th>
-            <th class="w-10" scope="col">function</th>
-            <th class="w-70" scope="col">message</th>
+            <th class="w-80" scope="col">changes</th>
         </tr>
     </thead>
     <tbody id="log">
@@ -25,7 +23,7 @@
 <footer class="bg-light text-center p-0 pt-1 fixed-bottom">
     <div class='row justify-content-center'>
         <div class="col text-right">
-            <span class="h5">{{ appname }}</span> Log </div>
+            <span class="h5">{{ appname }}</span> Events </div>
         <div class="col text-left">
             <form>
                 <div class="form-group mb-0">
@@ -41,5 +39,5 @@
 {% block script %}
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.1/socket.io.min.js"></script>
 <script type="text/javascript" charset="utf-8" src="{{ url_for('static', filename='js/shared.js') }}"> </script>
-<script type="text/javascript" charset="utf-8" src="{{ url_for('static', filename='js/log.js') }}"> </script>
+<script type="text/javascript" charset="utf-8" src="{{ url_for('static', filename='js/events.js') }}"> </script>
 {% endblock %}

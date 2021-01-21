@@ -169,9 +169,9 @@ class EventsNamespace(Namespace):
     def on_connect():
         '''emit initital event after a successful connection'''
 
-        data = sensors.get_metrics_dict_by_node(skip_None=False)
+        nodes = sensors.get_metrics_dict_by_node(skip_None=False)
 
-        emit('init_response', json.dumps(data), namespace=EVENTS_NAMESPACE)
+        emit('init_response', json.dumps(nodes), namespace=EVENTS_NAMESPACE)
 
 
 class LogsNamespace(Namespace):
@@ -400,21 +400,17 @@ class InfoIP(Resource):
 
 
 @app.route('/')
-@app.route('/sensors')
-@metrics.func_measure({'location': '/sensors'})
-def table():
-    return render_template('sensors.html',
-                           time_locale=pars.time_locale,
+@app.route('/data')
+@metrics.func_measure({'location': '/data'})
+def data():
+    return render_template('data.html',
                            async_mode=sio.async_mode,
                            data=sensors.get_sensors_dump_dict())
 
 
-@app.route('/scheduler')
-@metrics.func_measure({'location': '/scheduler'})
-def scheduler():
-    return render_template('scheduler.html',
-                           time_locale=pars.time_locale,
-                           async_mode=sio.async_mode)
+@app.route('/events')
+def events():
+    return render_template('events.html', async_mode=sio.async_mode)
 
 
 @app.route('/log')
@@ -422,14 +418,22 @@ def log():
     return render_template('log.html', async_mode=sio.async_mode)
 
 
+@app.route('/status/scheduler')
+@metrics.func_measure({'location': '/scheduler'})
+def scheduler():
+    return render_template('scheduler.html', async_mode=sio.async_mode)
+
+
+@app.route('/status/metrics')
+def status_metrics():
+    return render_template('metrics.html', async_mode=sio.async_mode)
+
+
 @app.route('/doc')
+@api.documentation
+@metrics.func_measure({'location': '/doc'})
 def doc():
-    return render_template('doc.html', async_mode=sio.async_mode)
-
-
-@app.route('/prom')
-def prom():
-    return render_template('prom.html', async_mode=sio.async_mode)
+    return render_template('doc.html', title=api.title, specs_url=api.specs_url)
 
 
 #
