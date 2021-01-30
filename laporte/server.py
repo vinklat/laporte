@@ -16,11 +16,11 @@ from gevent.pywsgi import WSGIServer, LoggingLogAdapter
 from apscheduler.schedulers.gevent import GeventScheduler
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-from laporte.version import __version__, get_build_info
-from laporte.argparser import get_pars
-from laporte.sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
-from laporte.prometheus import PrometheusMetrics
-from laporte.logger import ConfiguredLogger, LOGS_NAMESPACE
+from .version import __version__, get_build_info
+from .argparser import get_pars
+from .sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
+from .prometheus import PrometheusMetrics
+from .logger import ConfiguredLogger, LOGS_NAMESPACE
 
 # get parameters from command line arguments
 pars = get_pars()

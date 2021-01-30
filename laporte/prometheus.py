@@ -9,8 +9,8 @@ from time import time
 from functools import wraps
 from prometheus_client.core import (InfoMetricFamily, GaugeMetricFamily,
                                     CounterMetricFamily, SummaryMetricFamily)
-from laporte.sensor import COUNTER
-from laporte.version import __version__
+from .sensor import COUNTER
+from .version import __version__
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())

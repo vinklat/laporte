@@ -4,7 +4,7 @@
 import logging
 import os
 from argparse import ArgumentParser, ArgumentTypeError
-from laporte.version import __version__, get_build_info
+from .version import __version__, get_build_info
 
 _LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 

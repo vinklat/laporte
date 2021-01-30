@@ -8,9 +8,9 @@ from jinja2 import (Environment, FileSystemLoader, TemplateSyntaxError, Template
 from yaml import safe_load, YAMLError
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
-from laporte.version import __version__
-from laporte.sensor import Gauge, Counter, Binary, Message
-from laporte.sensor import SENSOR, ACTUATOR, GAUGE, COUNTER, BINARY
+from .version import __version__
+from .sensor import (Gauge, Counter, Binary, Message, SENSOR, ACTUATOR, GAUGE, COUNTER,
+                     BINARY)
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
