@@ -21,6 +21,7 @@ from .argparser import get_pars
 from .sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
 from .prometheus import PrometheusMetrics
 from .logger import ConfiguredLogger, LOGS_NAMESPACE
+from .event_id import event_id, request_id
 
 # get parameters from command line arguments
 pars = get_pars()
@@ -57,6 +58,7 @@ def http_request():
     '''
     This function will run before every http request.
     '''
+    request_id.set(request.headers.get('X-Request-ID', None))
     logger.info('%s %s', request.method, request.path)
     logger.debug('headers = "%s"',
                  str(request.headers).encode("unicode_escape").decode("utf-8"))
@@ -76,8 +78,7 @@ def http_response(response):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     response.headers['Cache-Control'] = 'public, max-age=0'
-    # TODO
-    # response.headers['X-Request-ID']
+    response.headers['X-Request-ID'] = request_id.get()
 
     metrics.counter_inc({"http_status": str(response.status_code)})
 
@@ -120,6 +121,7 @@ class MetricsNamespace(Namespace):
         '''
         receive metrics of changed sensors identified by node_id/sensor_id
         '''
+        event_id.set(add_prefix='sio_')
 
         for node_id in message:
             request_form = message[node_id]
@@ -133,7 +135,10 @@ class MetricsNamespace(Namespace):
     @staticmethod
     @metrics.func_measure({'event': 'sensor_addr_response', 'namespace': '/metrics'})
     def on_sensor_addr_response(message):
-        '''receive metrics of changed sensors identified by node_addr/key'''
+        '''
+        receive metrics of changed sensors identified by node_addr/key
+        '''
+        event_id.set(add_prefix='sio_')
 
         for node_id, request_form in sensors.conv_addrs_to_ids(message).items():
             logger.info('SocketIO translated message: node_id=%s: data=%s', node_id,
@@ -233,6 +238,7 @@ class NodeMetrics(Resource):
     @metrics.func_measure({'method': 'put', 'location': '/api/metrics/<node_id>'})
     def put(self, node_id):
         '''set sensors of a node'''
+        event_id.set(add_prefix='api_')
         logger.info("API/set: %s: %s", node_id, str(request.form.to_dict()))
         try:
             ret = sensors.set_node_values(node_id, request.form)

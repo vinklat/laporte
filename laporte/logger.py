@@ -5,6 +5,7 @@ custom logging filters and handlers
 
 import logging
 import json
+from .event_id import event_id
 
 LOGS_NAMESPACE = '/logs'
 _MAX_LOGBUF_ITEMS = 2048
@@ -41,14 +42,14 @@ class SioHandler(logging.StreamHandler):
     def emit(self, record):
         msg = self.format(record)
 
-        if not hasattr(record, 'request_id'):
-            record.request_id = ''
+        if not hasattr(record, 'event_id'):
+            record.event_id = event_id.get()
 
-        if self.sio is not None:
+        if not (record.event_id is None or self.sio is None):
             try:
                 emit_msg = {
                     'time': record.created,
-                    'request_id': record.request_id,
+                    'event_id': record.event_id,
                     'levelname': record.levelname,
                     'module': record.module,
                     'filename': record.filename,

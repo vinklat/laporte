@@ -4,7 +4,7 @@
 */
 
 function print_log(log) {
-    const { time, levelname, msg, request_id, funcname, filename, fileno } = log;
+    const { time, levelname, msg, event_id, funcname, filename, fileno } = log;
     const tlog = new Date(time * 1000);
     const tnow = new Date();
 
@@ -24,7 +24,7 @@ function print_log(log) {
                 <small class="text-secondary font-weight-light">${levelname}</small>
             </td>
             <td>
-                <small>${request_id}</small>
+                <small>${event_id}</small>
             </td>
             <td>
                 ${funcname}

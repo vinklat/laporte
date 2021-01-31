@@ -1,6 +1,3 @@
-/* global 
-    $
-*/
 /* jshint 
     unused:false
 */
