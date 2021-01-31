@@ -37,8 +37,25 @@ metrics = PrometheusMetrics(sensors)
 REGISTRY.register(metrics.CustomCollector(metrics))
 cl.prometheus_handler.metrics = metrics
 
+
 # create Flask application
+class ReverseProxyFix():
+    '''
+    a middleware to fix app errors behind a reverse proxy + https
+    needs protocol scheme stored in X-Forwarded-Proto header
+    '''
+    def __init__(self, flask_app):
+        self.app = flask_app
+
+    def __call__(self, environ, start_response):
+        scheme = environ.get('HTTP_X_FORWARDED_PROTO', '')
+        if scheme:
+            environ['wsgi.url_scheme'] = scheme
+        return self.app(environ, start_response)
+
+
 app = Flask(__name__)
+app.wsgi_app = ReverseProxyFix(app.wsgi_app)
 
 # register API blueprint
 blueprint = Blueprint('api', __name__, url_prefix='/api')
@@ -108,7 +125,8 @@ def http_response_error(error=None):
 sio = SocketIO(app,
                async_mode='gevent',
                logger=pars.log_verbose,
-               engineio_logger=pars.log_verbose)
+               engineio_logger=pars.log_verbose,
+               cors_allowed_origins="*")
 sensors.sio = sio
 cl.sio_handler.sio = sio
 
