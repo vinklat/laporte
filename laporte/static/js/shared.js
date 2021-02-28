@@ -2,28 +2,20 @@
     unused:false
 */
 
+const utfChars = '\u00A0-\u9999<>\&';
+const utfEncode = (char) => ('&#' + char.charCodeAt(0) + ';');
+const customEncode = {
+    '\n': '<br/>',
+    ' ': '&nbsp'
+};
+const customChars = Object.keys(customEncode).join('');
+
+const encRegex = new RegExp(`[${utfChars}${customChars}]`, 'g');
+
 const htmlEncode = (str) => {
-    return str.replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/'/g, '&#39;')
-        .replace(/"/g, '&#34;');
-};
-
-const isTruncated = (id) => {
-    const elem = $('#eval-truncate');
-    return elem.innerHeight() > elem.parent().innerHeight();
-};
-
-const checkTruncated = (id) => {
-    const elem = $(id);
-    const parent = $(elem).parent();
-    parent.addClass('truncate-overflow');
-    if (elem.innerHeight() > parent.innerHeight()) {
-        parent.addClass('long');
-    } else {
-        parent.removeClass('truncate-overflow long');
-    }
+    return str.replace(encRegex, function (c) {
+        return customEncode[c] || utfEncode(c);
+    });
 };
 
 const logTrClass = (level) => {

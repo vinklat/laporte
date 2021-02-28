@@ -1,13 +1,13 @@
 /* global 
     io, locale, followLogs, scrollToBottomAnimate, is_same_day,
-    logTrClass, htmlEncode, checkTruncated, scrollToBottomInstant
+    logTrClass, htmlEncode, scrollToBottomInstant
 */
 
-function print_log(log) {
+function render_log(log) {
     const { time, levelname, msg, event_id, funcname, filename, fileno } = log;
     const tlog = new Date(time * 1000);
     const tnow = new Date();
-
+    const long = msg.length > 320;
     var tstr = `${tlog.toLocaleTimeString(locale)}`;
     if (!is_same_day(tlog, tnow)) {
         tstr = `${tlog.toLocaleDateString(locale).replace(/ /g, '')} ` + tstr;
@@ -34,19 +34,27 @@ function print_log(log) {
                 </small>
             </td>
             <td class="small text-break">
-                <div class="truncate-overflow">
-                    <samp id="eval-truncate">${encodedMsg} </samp>
+                <div ${long && 'class="truncate-overflow"'}>
+                    <samp>${encodedMsg} </samp>
                 </div>
             </td> 
         </tr>
     `;
 
-    $('#log').append(row);
+    return row;
+}
 
-    //check if truncated
-    const elem = $('#eval-truncate');
-    checkTruncated(elem);
-    elem.removeAttr('id');
+function print_batch_log(logs) {
+    if (logs && logs.length) {
+        var result = "";
+        logs.forEach(log => result = result.concat(render_log(log)));
+        $('#log').append(result);
+    }
+}
+
+function print_log(log) {
+    const row = render_log(log);
+    $('#log').append(row);
 }
 
 $(document).ready(function () {
@@ -66,14 +74,11 @@ $(document).ready(function () {
     });
 
     // Event handler: server sent old logs from the buffer.
-    socket.on('init_response', function (msg) {
+    socket.on('hist_response', function (msg) {
         var buf = JSON.parse(msg);
 
         $('#log').html('');
-        buf.forEach(function (log) {
-            print_log(log);
-        });
-
+        print_batch_log(buf);
         scrollToBottomInstant();
     });
 
@@ -87,14 +92,8 @@ $(document).ready(function () {
         }
     });
 
-    //toggle truncated
-    $('#log').on('click', 'tr td div.long', function () {
-        $(this).toggleClass('truncate-overflow');
-    });
-
-    $(window).resize(function () {
-        $("#log tr td div samp").each(function () {
-            checkTruncated(this);
-        });
+    // Toggle truncated
+    $('#log').on('click', 'tr td div.truncate-overflow', function () {
+        $(this).removeClass('truncate-overflow');
     });
 });

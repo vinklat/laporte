@@ -192,9 +192,9 @@ class EventsNamespace(Namespace):
     def on_connect():
         '''emit initital event after a successful connection'''
 
-        nodes = sensors.get_metrics_dict_by_node(skip_None=False)
-
-        emit('init_response', json.dumps(nodes), namespace=EVENTS_NAMESPACE)
+        init_resp = {'data': sensors.get_metrics_dict_by_node(skip_None=False)}
+        emit('init_response', json.dumps(init_resp), namespace=EVENTS_NAMESPACE)
+        emit('hist_response', json.dumps(sensors.diff_buf), namespace=EVENTS_NAMESPACE)
 
 
 class LogsNamespace(Namespace):
@@ -204,7 +204,7 @@ class LogsNamespace(Namespace):
     def on_connect():
         '''fired upon a successful connection'''
 
-        emit('init_response',
+        emit('hist_response',
              json.dumps(cl.sio_handler.log_buf),
              namespace=LOGS_NAMESPACE)
 

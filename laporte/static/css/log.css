@@ -2,16 +2,24 @@ html {
     --lh: 1.5em;
 }
 
-.w-5 {
-    width: 5%;
-}
-
 .w-10 {
     width: 10%;
 }
 
-.w-80 {
-    width: 80%;
+.w-15 {
+    width: 15%;
+}
+
+.w-20 {
+    width: 20%;
+}
+
+.w-40 {
+    width: 40%;
+}
+
+.w-60 {
+    width: 60%;
 }
 
 .table {
@@ -25,8 +33,9 @@ html {
 }
 
 .sticky-header th{
-    position:sticky;
+    position: sticky;
     top: 0;
+    z-index: 20;
 }
 
 nav.sticky-top + main table.sticky-header th {
@@ -39,27 +48,27 @@ nav.sticky-top + main table.sticky-header th {
     position: relative;
     max-height: calc(var(--lh) * var(--max-lines));
     overflow: hidden;
-}
+    cursor: pointer;
 
-.truncate-overflow:hover {
-    cursor:pointer;
-    background: linear-gradient(to right, #f1f1f1, rgba(238, 238,238, 0) 100%);
 }
 
 .truncate-overflow:hover::after {
-    content: "...more";
-    background: linear-gradient(to right, rgba(255, 255, 255, .4), white 100%);
-    text-align: right;
-    color: var(--primary);
+    background-color: #ececf6;
 
 }
-
 .truncate-overflow::after {
-    content: "";
+    content: "...more";
     position: absolute;
-    width: 30%;
+    cursor: pointer;
+    width: 5em;
     height: var(--lh);
     top: calc(var(--lh) * calc(var(--max-lines) - 1));
     right: 0;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0), white 100%);
+    color: var(--primary);
+    background-color: #fdfdfe;
+    text-align: right;
+}
+
+.odd-row {
+    background-color: #fafafa;
 }

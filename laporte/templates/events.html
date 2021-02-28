@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}events{% endblock %}
+{% block title %}Event Log{% endblock %}
 {% block styles %}
 {{super()}}
 <!-- Logs CSS -->
@@ -7,33 +7,40 @@
 {% endblock %}
 
 {% block content %}
-<table class="table table-sm sticky-header pt-5 pb-5">
+<table class="table table-sm border border-light sticky-header">
     <thead class="bg-light">
         <tr>
-            <th class="w-10" scope="col">time</th>
-            <th class="w-10" scope="col">event id</th>
-            <th class="w-80" scope="col">changes</th>
+            <th class="w-15" scope="col">time</th>
+            <th class="w-15" scope="col">event id</th>
+            <th class="w-15" scope="col">node</th>
+            <th class="w-15" scope="col">sensor</th>
+            <th class="w-40" scope="col" colspan=2>
+                <div class="d-flex justify-content-between">
+                    <div>changes</div>
+                    <div class="font-weight-light">
+                        <form>
+                            <input type="checkbox" id="followLogs" checked /> follow
+                            <!-- <label class="font-weight-light nopadding" for="followLogs">Follow</label> -->
+                        </form>
+                    </div>
+                </div>
+            </th>
         </tr>
     </thead>
     <tbody id="log">
+        <tr>
+            <td class="text-center" colspan="6">
+                <div class="spinner-border mt-5 mr-1" role="status">
+                    <span class="sr-only">spinner</span>
+                </div>
+                loading...
+            </td>
+        </tr>
     </tbody>
 </table>
 
 <span id="log-end"></span>
-<footer class="bg-light text-center p-0 pt-1 fixed-bottom">
-    <div class='row justify-content-center'>
-        <div class="col text-right">
-            <span class="h5">{{ appname }}</span> Events </div>
-        <div class="col text-left">
-            <form>
-                <div class="form-group mb-0">
-                    <input type="checkbox" id="followLogs" checked />
-                    <label for="followLogs">Follow</label>
-                </div>
-            </form>
-        </div>
-    </div>
-</footer>
+
 {% endblock %}
 
 {% block script %}

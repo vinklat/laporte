@@ -5,20 +5,20 @@
 var countdowns = {};
 
 function fill_metrics(msg) {
-    var obj = JSON.parse(msg);
+    const event_data = JSON.parse(msg).data;
     const tnow = new Date();
     const tnowzero = tnow - (60 * 60 * 1000 * tnow.getHours()) - (60 * 1000 * tnow.getMinutes()) - (1000 * tnow.getSeconds());
 
-    for (var node_id in obj) {
-        if (obj.hasOwnProperty(node_id)) {
-            for (var sensor_id in obj[node_id]) {
-                if (obj[node_id].hasOwnProperty(sensor_id)) {
+    for (var node_id in event_data) {
+        if (event_data.hasOwnProperty(node_id)) {
+            for (var sensor_id in event_data[node_id]) {
+                if (event_data[node_id].hasOwnProperty(sensor_id)) {
                     var sensor_label = (node_id + "_" + sensor_id).replace(/\./g, "-");
-                    for (var metric in obj[node_id][sensor_id]) {
-                        if (obj[node_id][sensor_id].hasOwnProperty(metric)) {
+                    for (var metric in event_data[node_id][sensor_id]) {
+                        if (event_data[node_id][sensor_id].hasOwnProperty(metric)) {
                             var metric_label = sensor_label + "_" + metric;
                             var id = "#" + metric_label;
-                            var value = obj[node_id][sensor_id][metric];
+                            var value = event_data[node_id][sensor_id][metric];
 
                             switch (typeof value) {
                                 case "number":
@@ -103,7 +103,7 @@ $(document).ready(function () {
     });
 
     // Event handler for server sent event data.
-    socket.on('update_response', function (msg) {
+    socket.on('event_response', function (msg) {
         fill_metrics(msg);
     });
 });

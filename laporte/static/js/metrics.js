@@ -4,7 +4,7 @@
 
 function refresh_metrics() {
     const url = '/metrics';
-    $.get(url, function(data) {
+    $.get(url, function (data) {
         var lines = data.split("\n");
         $('#metrics').html("");
 
@@ -18,7 +18,7 @@ function refresh_metrics() {
     });
 }
 
-$(document).ready(function() {
+$(document).ready(function () {
     // Connect to the Socket.IO server.
     const namespace = "/events";
     const url = `${location.protocol}//${document.domain}:${location.port}`;
@@ -27,19 +27,19 @@ $(document).ready(function() {
 
 
     // Event handler for new connections.
-    socket.on('connect', function() {
+    socket.on('connect', function () {
         $('#status').html("connected");
         refresh_metrics();
     });
 
     // Event handler for lost connection.
-    socket.on('disconnect', function() {
+    socket.on('disconnect', function () {
         $('#status').html("not connected");
     });
 
     // Event handler for server sent event data.
     /* jshint unused: vars */
-    socket.on('update_response', function(msg) {
+    socket.on('update_response', function (msg) {
         refresh_metrics();
-    });  
+    });
 });

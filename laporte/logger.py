@@ -60,6 +60,7 @@ class SioHandler(logging.StreamHandler):
             except (NameError, AttributeError):
                 emit_msg = {}
 
+            # store log history
             self.log_buf.append(emit_msg)
             if len(self.log_buf) > _MAX_LOGBUF_ITEMS:
                 del self.log_buf[0]

@@ -3,12 +3,14 @@
 
 import logging
 import json
+from time import time
 from datetime import datetime, timedelta
 from jinja2 import (Environment, FileSystemLoader, TemplateSyntaxError, TemplateNotFound)
 from yaml import safe_load, YAMLError
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
 from .version import __version__
+from .event_id import event_id
 from .sensor import (Gauge, Counter, Binary, Message, SENSOR, ACTUATOR, GAUGE, COUNTER,
                      BINARY)
 
@@ -23,6 +25,8 @@ METRICS = {
 }
 SETUP = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
 
+_MAX_DIFFBUF_ITEMS = 2048
+
 
 class Sensors():
     '''container to store a set of sensors'''
@@ -31,6 +35,7 @@ class Sensors():
         self.node_template_index = {}
         self.sensor_template_index = {}
         self.sensor_index = []
+        self.diff_buf = []
 
     def __init__(self):
         self.reset()
@@ -146,12 +151,12 @@ class Sensors():
     def __add_cron_jobs(self, sensor):
         if isinstance(sensor.cron, dict):
             for cron_str, value in sensor.cron.items():
-                time = cron_str.split()
-                if len(time) == 6:
-                    (second, minute, hour, day, month, day_of_week) = time
-                elif len(time) == 5:
+                cron_items = cron_str.split()
+                if len(cron_items) == 6:
+                    (second, minute, hour, day, month, day_of_week) = cron_items
+                elif len(cron_items) == 5:
                     second = '0'
-                    (minute, hour, day, month, day_of_week) = time
+                    (minute, hour, day, month, day_of_week) = cron_items
                 else:
                     raise TypeError
 
@@ -390,7 +395,7 @@ class Sensors():
         sensor.ttl_job = None
         self.__reset_sensor(sensor)
 
-    def final_changes_processing(self, diff, call_after_expire=False):
+    def finish_changes(self, diff, call_after_expire=False):
         '''
         schedule remaining TTLs
         final emit of changes to SocketIO
@@ -455,8 +460,17 @@ class Sensors():
                         actuator_addr_values[sensor.gw][sensor.node_addr][
                             sensor.key] = sensor.value
 
-        logging.info('final changes: %s', diff)
-        self.sio.emit('update_response', json.dumps(diff), namespace=EVENTS_NAMESPACE)
+        logging.debug('changed metrics: %s', diff)
+
+        event_log_item = {'time': time(), 'event_id': event_id.get(), 'data': diff}
+        self.sio.emit('event_response',
+                      json.dumps(event_log_item),
+                      namespace=EVENTS_NAMESPACE)
+
+        # store log history
+        self.diff_buf.append(event_log_item)
+        if len(self.diff_buf) > _MAX_DIFFBUF_ITEMS:
+            del self.diff_buf[0]
 
         if actuator_id_values:
             for gateway, data in actuator_id_values.items():
@@ -476,7 +490,7 @@ class Sensors():
 
         diff2 = self.__get_changed_nodes_dict()
         if diff2:
-            logging.debug("scheduler: new ttl jobs: %s", diff2)
+            logging.debug("schedule expires: %s", diff2)
 
         return True
 
@@ -531,7 +545,7 @@ class Sensors():
         changes = {}
         if changed:
             changes = self.__get_changed_nodes_dict()
-            self.final_changes_processing(changes)
+            self.finish_changes(changes)
 
         return changes
 
@@ -546,7 +560,7 @@ class Sensors():
         self.__do_requiring_eval(sensor)
         self.__used_dataset_reset()
         changes = self.__get_changed_nodes_dict()
-        self.final_changes_processing(changes, call_after_expire=True)
+        self.finish_changes(changes, call_after_expire=True)
 
     def get_parser_arguments(self):
 
@@ -569,7 +583,7 @@ class Sensors():
             sensor.reset()
 
         changes = self.__get_changed_nodes_dict()
-        self.final_changes_processing(changes)
+        self.finish_changes(changes)
 
         return changes
 
@@ -578,7 +592,7 @@ class Sensors():
             sensor.__init__()
 
         changes = self.__get_changed_nodes_dict()
-        self.final_changes_processing(changes)
+        self.finish_changes(changes)
 
         return changes
 
@@ -612,6 +626,6 @@ class Sensors():
         self.default_values()
         self.reset()
         changes = self.load_config(pars)
-        self.final_changes_processing(changes)
+        self.finish_changes(changes)
         self.sio.emit('reload_response')
         return changes

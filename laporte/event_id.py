@@ -45,15 +45,15 @@ class EventID():
 
 class RequestID():
     @staticmethod
-    def set(request_id=None):
+    def set(rid=None):
         '''
         Save http request ID into flask's G object.
         '''
 
-        if request_id is None:
-            request_id = str(uuid.uuid4())
+        if rid is None:
+            rid = str(uuid.uuid4())
 
-        setattr(g, _G_ATTR_HTTP_REQUEST_ID, request_id)
+        setattr(g, _G_ATTR_HTTP_REQUEST_ID, rid)
 
     @staticmethod
     def get():
