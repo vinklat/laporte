@@ -3,6 +3,7 @@
 
 import logging
 import json
+import hashlib
 from time import time
 from datetime import datetime, timedelta
 from jinja2 import (Environment, FileSystemLoader, TemplateSyntaxError, TemplateNotFound)
@@ -37,11 +38,13 @@ class Sensors():
         self.sensor_index = []
         self.diff_buf = []
 
-    def __init__(self):
+    def __init__(self, app, scheduler):
         self.reset()
         self.sio = None
         self.scheduler = None
         self.prev_data = {}
+        self.app = app
+        self.scheduler = scheduler
 
     def __add_sensor(self,
                      gw,
@@ -160,6 +163,10 @@ class Sensors():
                 else:
                     raise TypeError
 
+                job_id = 'cron_{}.{}_{}'.format(
+                    sensor.node_id, sensor.sensor_id,
+                    hashlib.sha256(cron_str.encode('utf-8')).hexdigest()[0:6])
+
                 job = self.scheduler.add_job(func=self.sensor_cron_trigger,
                                              trigger=CronTrigger(month=month,
                                                                  day=day,
@@ -167,7 +174,8 @@ class Sensors():
                                                                  hour=hour,
                                                                  minute=minute,
                                                                  second=second),
-                                             args=[sensor, value])
+                                             id=job_id,
+                                             args=[sensor, value, job_id])
                 logging.debug("scheduler: add %s", job)
                 if not isinstance(sensor.cron_jobs, list):
                     sensor.cron_jobs = [job]
@@ -368,32 +376,36 @@ class Sensors():
             if s.dataset_used:
                 s.dataset_reset()
 
-    def sensor_cron_trigger(self, sensor, value):
+    def sensor_cron_trigger(self, sensor, value, eid):
         '''
         called from scheduler when cron time has come
         '''
 
-        logging.info("scheduller run: %s.%s cron time has come", sensor.node_id,
-                     sensor.sensor_id)
+        with self.app.app_context():
+            event_id.set(eid=eid)
 
-        # set the same value if None / null
-        if value is None:
-            x = sensor.value
-        else:
-            x = value
+            logging.info("%s.%s cron time has come", sensor.node_id, sensor.sensor_id)
 
-        self.set_node_values(sensor.node_id, {sensor.sensor_id: x})
+            # set the same value if None / null
+            if value is None:
+                x = sensor.value
+            else:
+                x = value
 
-    def sensor_expire(self, sensor):
+            self.set_node_values(sensor.node_id, {sensor.sensor_id: x})
+
+    def sensor_expire(self, sensor, eid):
         '''
         called from scheduler job when TTL expires
         '''
 
-        logging.info("scheduller run: %s.%s TTL expired", sensor.node_id,
-                     sensor.sensor_id)
+        with self.app.app_context():
+            event_id.set(eid=eid)
 
-        sensor.ttl_job = None
-        self.__reset_sensor(sensor)
+            logging.info("%s.%s TTL expired", sensor.node_id, sensor.sensor_id)
+
+            sensor.ttl_job = None
+            self.__reset_sensor(sensor)
 
     def finish_changes(self, diff, call_after_expire=False):
         '''
@@ -434,11 +446,12 @@ class Sensors():
                     if ttl_add_job:
                         ttl_time = datetime.fromtimestamp(
                             sensor.hit_timestamp) + timedelta(seconds=sensor.ttl)
+
                         sensor.ttl_job = self.scheduler.add_job(
                             func=self.sensor_expire,
                             trigger=DateTrigger(run_date=ttl_time),
-                            id='exp-{}-{}'.format(node_id, sensor_id),
-                            args=[sensor],
+                            id='exp_{}.{}'.format(node_id, sensor_id),
+                            args=[sensor, event_id.get()],
                             replace_existing=True)
                         diff[node_id][sensor_id]['exp_timestamp'] = datetime.timestamp(
                             sensor.ttl_job.next_run_time)
