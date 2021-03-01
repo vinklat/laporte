@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Runtime & Build Information{% endblock %}
+{% block styles %}
+{{super()}}
+<!-- Logs CSS -->
+<link rel="stylesheet" href="{{url_for('static', filename='css/log.css')}}">
+{% endblock %}
+
+{% block content %}
+
+<div style="padding-top: 3rem">
+<h2>Runtime</h3>
+<table class="table table-borderless table-striped table-sm">
+    <tbody>
+        <tr>
+            <th class="w-40" scope="row">{{ appname }} version</th>
+            <td class="w-60">{{ runtime.version }}</td>
+        </tr>
+        <tr>
+            <th scope="row">Python version</th>
+            <td>{{ runtime.python_version }}</td>
+        </tr>
+        {% if runtime['HOSTNAME'] %}
+        <tr>
+            <th scope="row">Hostname</th>
+            <td>{{ runtime['HOSTNAME'] }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <th scope="row">Start timestamp</th>
+            <td>{{ runtime['start_timestamp'] }}</td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+<div style="padding-top: 2rem">
+<h2>Python modules</h2>
+<table class="table table-borderless table-striped table-sm">
+    <thead>
+        <tr>
+            <th class="w-40" scope="col">module</th>
+            <th class="w-60" scope="col">version</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for x in runtime.python_modules %}
+        <tr>
+            <td>{{ x }}</td>
+            <td>{{ runtime.python_modules[x] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+{% endblock %}

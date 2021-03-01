@@ -23,14 +23,15 @@
                 <a class="navbar-brand mb-0 h1" href="#">{{ appname }}</a>
                 {{ render_nav_item('data', 'Data', use_li=True) }}
                 {{ render_nav_item('events', 'Events', use_li=True) }}
-                {{ render_nav_item('log', 'Log', use_li=True) }}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                       Status
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                        <a class="dropdown-item" href="{{ url_for('scheduler' )}}">Scheduler</a>
-                        <a class="dropdown-item" href="{{ url_for('status_metrics' )}}">Metrics</a>
+                        <a class="dropdown-item" href="{{ url_for('status_info' )}}">Runtime & Build Information</a>
+                        <a class="dropdown-item" href="{{ url_for('status_scheduler' )}}">Event Scheduler</a>
+                        <a class="dropdown-item" href="{{ url_for('status_metrics' )}}">Prometheus Metrics</a>
+                        <a class="dropdown-item" href="{{ url_for('status_log' )}}">Application Log</a>
                     </div>
                 </li>                                    
                 {{ render_nav_item('doc', 'Documentation', use_li=True) }}

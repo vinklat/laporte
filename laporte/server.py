@@ -16,7 +16,7 @@ from gevent.pywsgi import WSGIServer, LoggingLogAdapter
 from apscheduler.schedulers.gevent import GeventScheduler
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-from .version import __version__, get_build_info
+from .version import __version__, get_version_info, get_runtime_info
 from .argparser import get_pars
 from .sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
 from .prometheus import PrometheusMetrics
@@ -235,7 +235,7 @@ ns_state = api.namespace('state',
                          description='methods for manipulating process state',
                          path='/state')
 ns_info = api.namespace('info',
-                        description='methods to obtain information',
+                        description='methods to obtain application information',
                         path='/info')
 
 parser = api.parser()
@@ -397,9 +397,17 @@ class StateDump(Resource):
 @ns_info.route('/version')
 class InfoVersion(Resource):
     def get(self):
-        '''get app version and resources info'''
+        '''get application version info'''
 
-        return get_build_info()
+        return get_version_info()
+
+
+@ns_info.route('/runtime')
+class InfoRuntime(Resource):
+    def get(self):
+        '''get application runtime resources and info'''
+
+        return get_runtime_info()
 
 
 @ns_info.route('/myip')
@@ -437,20 +445,27 @@ def events():
     return render_template('events.html', async_mode=sio.async_mode)
 
 
-@app.route('/log')
-def log():
-    return render_template('log.html', async_mode=sio.async_mode)
+@app.route('/status/info')
+@metrics.func_measure({'location': '/status/info'})
+def status_info():
+
+    return render_template('info.html', runtime=get_runtime_info())
 
 
 @app.route('/status/scheduler')
 @metrics.func_measure({'location': '/scheduler'})
-def scheduler():
+def status_scheduler():
     return render_template('scheduler.html', async_mode=sio.async_mode)
 
 
 @app.route('/status/metrics')
 def status_metrics():
     return render_template('metrics.html', async_mode=sio.async_mode)
+
+
+@app.route('/status/log')
+def status_log():
+    return render_template('log.html', async_mode=sio.async_mode)
 
 
 @app.route('/doc')

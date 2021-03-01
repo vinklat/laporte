@@ -4,7 +4,7 @@
 import logging
 import os
 from argparse import ArgumentParser, ArgumentTypeError
-from .version import __version__, get_build_info
+from .version import __version__, get_version_info
 
 _LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 
@@ -116,7 +116,7 @@ def get_pars():
     parser.add_argument('-V',
                         '--version',
                         action='version',
-                        version=str(get_build_info()))
+                        version=str(get_version_info()))
     parser.add_argument('-l',
                         '--log-level',
                         action='store',
