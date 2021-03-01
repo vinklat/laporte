@@ -26,7 +26,7 @@ METRICS = {
 }
 SETUP = {'sensor_id', 'node_id', 'mode', 'node_addr', 'key'}
 
-_MAX_DIFFBUF_ITEMS = 2048
+MAX_EVENTBUF_ITEMS = 2048
 
 
 class Sensors():
@@ -289,7 +289,7 @@ class Sensors():
 
         return changed
 
-    def __get_sensor_required_vars_dict(self, sensor):
+    def __get_sensor_required_vars(self, sensor):
         ret = {}
         used_list = []
 
@@ -302,14 +302,14 @@ class Sensors():
                         (sensor_id, metric_name) = tuple(metric_list)
                         node_id = sensor.node_id
                     else:
-                        logging.error("%s.%s: error in eval_require %s", node_id,
+                        logging.error("%s.%s: error in eval_require config %s", node_id,
                                       sensor_id, sensor.eval_require)
                         return {}
 
                     search_sensor = self.__get_sensor(node_id, sensor_id)
 
                     if search_sensor.debounce_dataset and not search_sensor.dataset_ready:
-                        logging.debug("skip eval %s.%s: not ready %s.%s in dataset",
+                        logging.debug("%s.%s skip eval: %s.%s not ready in dataset",
                                       sensor.node_id, sensor.sensor_id,
                                       search_sensor.node_id, search_sensor.sensor_id)
                         return {}
@@ -322,11 +322,11 @@ class Sensors():
                     else:
                         return {}
             except KeyError:
-                logging.debug("skip eval %s.%s: required sensor %s.%s not found",
+                logging.debug("%s.%s skip eval: required sensor %s.%s not found",
                               sensor.node_id, sensor.sensor_id, node_id, sensor_id)
                 return {}
             except StopIteration:
-                logging.debug("skip eval %s.%s: required metric %s of %s.%s not found",
+                logging.debug("%s.%s skip eval: required metric %s of %s.%s not found",
                               sensor.node_id, sensor.sensor_id, metric_name, node_id,
                               sensor_id)
                 return {}
@@ -356,7 +356,7 @@ class Sensors():
     def __do_requiring_eval(self, sensor, level=0, origin_sensors=None):
         if (level < 8) and (sensor.value != sensor.eval_break_value):
             for req_sensor in self.__get_requiring_sensors(sensor):
-                vars_dict = self.__get_sensor_required_vars_dict(req_sensor)
+                vars_dict = self.__get_sensor_required_vars(req_sensor)
 
                 if not isinstance(origin_sensors, list):
                     new_origin_sensors = [(sensor.node_id, sensor.sensor_id)]
@@ -384,7 +384,8 @@ class Sensors():
         with self.app.app_context():
             event_id.set(eid=eid)
 
-            logging.info("%s.%s cron time has come", sensor.node_id, sensor.sensor_id)
+            logging.info("%s.%s update triggered: cron time has come", sensor.node_id,
+                         sensor.sensor_id)
 
             # set the same value if None / null
             if value is None:
@@ -402,7 +403,8 @@ class Sensors():
         with self.app.app_context():
             event_id.set(eid=eid)
 
-            logging.info("%s.%s TTL expired", sensor.node_id, sensor.sensor_id)
+            logging.info("%s.%s update triggered: TTL=%d expired", sensor.node_id,
+                         sensor.sensor_id, sensor.ttl)
 
             sensor.ttl_job = None
             self.__reset_sensor(sensor)
@@ -465,7 +467,7 @@ class Sensors():
                     if node_id not in actuator_id_values[sensor.gw]:
                         actuator_id_values[sensor.gw][node_id] = {}
                     actuator_id_values[sensor.gw][node_id][sensor_id] = sensor.value
-                    if (sensor.node_addr != '') and (sensor.key != ''):
+                    if (sensor.node_addr is not None) and (sensor.key is not None):
                         if sensor.gw not in actuator_addr_values:
                             actuator_addr_values[sensor.gw] = {}
                         if sensor.node_addr not in actuator_addr_values[sensor.gw]:
@@ -482,7 +484,7 @@ class Sensors():
 
         # store log history
         self.diff_buf.append(event_log_item)
-        if len(self.diff_buf) > _MAX_DIFFBUF_ITEMS:
+        if len(self.diff_buf) > MAX_EVENTBUF_ITEMS:
             del self.diff_buf[0]
 
         if actuator_id_values:
@@ -524,7 +526,7 @@ class Sensors():
                         ret[sensor.node_id] = {}
                     ret[sensor.node_id][sensor.sensor_id] = value
                 else:
-                    logging.warning("sensor %s:%s not found in node", node_addr, key)
+                    logging.warning("sensor %s:%s not found", node_addr, key)
         return ret
 
     def set_node_values(self, node_id, sensor_values_dict, increment=False):
@@ -549,7 +551,7 @@ class Sensors():
                 changed = 1
 
                 if sensor.eval_code is not None:
-                    vars_dict = self.__get_sensor_required_vars_dict(sensor)
+                    vars_dict = self.__get_sensor_required_vars(sensor)
                     sensor.do_eval(vars_dict=vars_dict, update=False)
 
                 self.__do_requiring_eval(sensor)
@@ -567,7 +569,7 @@ class Sensors():
 
         if not sensor.eval_skip_expired and not skip_eval and sensor.value is not None:
             if sensor.eval_code is not None:
-                vars_dict = self.__get_sensor_required_vars_dict(sensor)
+                vars_dict = self.__get_sensor_required_vars(sensor)
                 sensor.do_eval(vars_dict=vars_dict, update=False)
 
         self.__do_requiring_eval(sensor)

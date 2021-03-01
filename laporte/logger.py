@@ -8,7 +8,7 @@ import json
 from .event_id import event_id
 
 LOGS_NAMESPACE = '/logs'
-_MAX_LOGBUF_ITEMS = 2048
+MAX_LOGBUF_ITEMS = 2048
 
 
 class PrometheusHandler(logging.StreamHandler):
@@ -62,7 +62,7 @@ class SioHandler(logging.StreamHandler):
 
             # store log history
             self.log_buf.append(emit_msg)
-            if len(self.log_buf) > _MAX_LOGBUF_ITEMS:
+            if len(self.log_buf) > MAX_LOGBUF_ITEMS:
                 del self.log_buf[0]
 
             # print("SIO LOG {}".format(emit_msg), flush=True)

@@ -42,6 +42,15 @@ class EventID():
 
         return None
 
+    @staticmethod
+    def release():
+        '''
+        Remove event ID from flask's G object.
+        '''
+
+        if stack.top is not None:
+            delattr(g, _G_ATTR_EVENT_ID)
+
 
 class RequestID():
     @staticmethod

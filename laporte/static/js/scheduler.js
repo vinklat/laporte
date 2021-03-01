@@ -112,7 +112,7 @@ $(document).ready(function () {
     });
 
     // Event handler for server sent event data.
-    socket.on('update_response', function (msg) {
+    socket.on('event_response', function (msg) {
         render_jobs(msg);
     });
 });

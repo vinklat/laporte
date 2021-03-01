@@ -75,10 +75,11 @@ def http_request():
     This function will run before every http request.
     '''
     request_id.set(request.headers.get('X-Request-ID', None))
-    logger.info('%s %s', request.method, request.path)
-    logger.debug('headers = "%s"',
-                 str(request.headers).encode("unicode_escape").decode("utf-8"))
-    logger.debug('body = "%s"', request.get_data().decode("utf-8"))
+    if pars.log_verbose:
+        logger.info('%s %s', request.method, request.path)
+        logger.debug('headers = "%s"',
+                     str(request.headers).encode("unicode_escape").decode("utf-8"))
+        logger.debug('body = "%s"', request.get_data().decode("utf-8"))
 
 
 @app.after_request
@@ -98,10 +99,11 @@ def http_response(response):
 
     prom_metrics.counter_inc({"http_status": str(response.status_code)})
 
-    logger.info('status = "%s"', response.status)
-    logger.debug('headers = "%s"',
-                 str(response.headers).encode("unicode_escape").decode("utf-8"))
-    logger.debug('body = "%s"', response.get_data().decode("utf-8"))
+    if pars.log_verbose:
+        logger.info('status = "%s"', response.status)
+        logger.debug('headers = "%s"',
+                     str(response.headers).encode("unicode_escape").decode("utf-8"))
+        logger.debug('body = "%s"', response.get_data().decode("utf-8"))
 
     return response
 
@@ -141,11 +143,10 @@ class MetricsNamespace(Namespace):
         event_id.set(add_prefix='sio_')
 
         for node_id in message:
-            request_form = message[node_id]
-            logger.info('SocketIO message: node_id=%s: data=%s', node_id,
-                        str(request_form))
+            node_data = message[node_id]
+            logger.info('node update event: %s: %s', node_id, str(node_data))
             try:
-                sensors.set_node_values(node_id, request_form)
+                sensors.set_node_values(node_id, node_data)
             except KeyError:
                 pass
 
@@ -159,10 +160,10 @@ class MetricsNamespace(Namespace):
         receive metrics of changed sensors identified by node_addr/key
         '''
         event_id.set(add_prefix='sio_')
+        logger.info('addr/key update event: %s', message)
 
         for node_id, request_form in sensors.conv_addrs_to_ids(message).items():
-            logger.info('SocketIO translated message: node_id=%s: data=%s', node_id,
-                        str(request_form))
+            logger.debug('update %s: %s', node_id, str(request_form))
             try:
                 sensors.set_node_values(node_id, request_form)
             except KeyError:
@@ -258,13 +259,15 @@ class NodeMetrics(Resource):
     @prom_metrics.func_measure({'method': 'put', 'location': '/api/metrics/<node_id>'})
     def put(self, node_id):
         '''set sensors of a node'''
+
         event_id.set(add_prefix='api_')
-        logger.info("API/set: %s: %s", node_id, str(request.form.to_dict()))
+        logger.info("node update request: %s: %s", node_id, str(request.form.to_dict()))
         try:
             ret = sensors.set_node_values(node_id, request.form)
         except KeyError:
             logger.warning("node %s or sensor not found", node_id)
             abort(404)  # sensor not configured
+        event_id.release()
 
         return ret
 

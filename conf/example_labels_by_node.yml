@@ -16,7 +16,7 @@
 #  laporte_temp_celsius{location="indoor",node="weather"} 22.2
 #
 # watch metrics + labels via status page
-#   http://localhost:9128/prom
+#   http://localhost:9128/status/metrics
 
 
 virtual:

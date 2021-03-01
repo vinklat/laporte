@@ -286,25 +286,33 @@ class Sensor(ABC):
         if self.hold:
             return False
 
-        value = self.fix_value(value)
+        try:
+            value = self.fix_value(value)
+        except ValueError as exc:
+            logging.error("%s.%s %s", self.node_id, self.sensor_id, exc)
+            return False
 
         if (value is not None) and (value == self.debounce_value):
-            logging.debug("debounce: skip value %s", value)
+            logging.debug("%s.%s debounce: skip value %s", self.node_id, self.sensor_id,
+                          value)
             return False
 
         if (value == self.value) and self.debounce_changed:
-            logging.debug("debounce: value not changed")
+            logging.debug("%s.%s debounce: value not changed", self.node_id,
+                          self.sensor_id)
             return False
 
         if self.debounce_time and isinstance(self.hit_timestamp, float):
             timestamp = time()
             if timestamp < self.hit_timestamp + self.debounce_time:
-                logging.debug("debounce: time %fs remaining",
+                logging.debug("%s.%s debounce: time %fs remaining", self.node_id,
+                              self.sensor_id,
                               self.hit_timestamp + self.debounce_time - timestamp)
                 return False
 
         if self.debounce_hits_remaining:
-            logging.debug("debounce: %d hits remaining", self.debounce_hits_remaining)
+            logging.debug("%s.%s debounce: %d hits remaining", self.node_id,
+                          self.sensor_id, self.debounce_hits_remaining)
             self.debounce_hits_remaining -= 1
             return False
 
@@ -364,16 +372,15 @@ class Sensor(ABC):
         result = aeval.eval(self.eval_code)
 
         if result is not None:
-            logging.info("eval %s.%s: OK, result = %s", self.node_id, self.sensor_id,
-                         result)
+            logging.debug("%s.%s = %s", self.node_id, self.sensor_id, result)
             return self.set(result, update=update)
 
         if len(aeval.error) > 0:
-            logging.error("eval %s.%s: ERROR", self.node_id, self.sensor_id)
+            logging.error("%s.%s: eval ERROR", self.node_id, self.sensor_id)
             for err in aeval.error:
                 logging.error(err.get_error())
         else:
-            logging.debug("eval %s.%s: no result", self.node_id, self.sensor_id)
+            logging.debug("%s.%s: no result", self.node_id, self.sensor_id)
 
         return False
 
