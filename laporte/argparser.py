@@ -44,9 +44,6 @@ def get_pars():
         'CONFIG_DIR': {
             'default': 'conf'
         },
-        'TIME_LOCALE': {
-            'default': 'en-US'
-        },
         'LOG_LEVEL': {
             'default': 'DEBUG'
         },
@@ -105,14 +102,6 @@ def get_pars():
                         dest='config_jinja',
                         help='use jinja2 in yaml config file',
                         **env_vars['CONFIG_JINJA'])
-    parser.add_argument('-t',
-                        '--time-locale',
-                        action='store',
-                        dest='time_locale',
-                        help='time formatting locale (default {0})'.format(
-                            env_vars['TIME_LOCALE']['default']),
-                        type=str,
-                        **env_vars['TIME_LOCALE'])
     parser.add_argument('-V',
                         '--version',
                         action='version',
