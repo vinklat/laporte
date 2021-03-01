@@ -39,7 +39,7 @@ $(document).ready(function () {
 
     // Event handler for server sent event data.
     /* jshint unused: vars */
-    socket.on('update_response', function (msg) {
+    socket.on('event_response', function (msg) {
         refresh_metrics();
     });
 });

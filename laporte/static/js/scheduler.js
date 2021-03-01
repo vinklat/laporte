@@ -1,5 +1,5 @@
 /* global 
-    io, locale
+    io, renderTime
 */
 
 var jobs = {};
@@ -20,18 +20,18 @@ function sort_object(obj) {
     return (sorted_obj);
 }
 
-function fill_jobs(msg) {
-    var obj = JSON.parse(msg);
+function render_jobs(msg) {
+    var event_data = JSON.parse(msg).data;
     var out = "";
 
-    for (var node_id in obj) {
-        if (obj.hasOwnProperty(node_id)) {
-            for (var sensor_id in obj[node_id]) {
-                if (obj[node_id].hasOwnProperty(sensor_id)) {
+    for (var node_id in event_data) {
+        if (event_data.hasOwnProperty(node_id)) {
+            for (var sensor_id in event_data[node_id]) {
+                if (event_data[node_id].hasOwnProperty(sensor_id)) {
                     var sensor_label = node_id + "-" + sensor_id;
-                    for (var metric in obj[node_id][sensor_id]) {
-                        if (obj[node_id][sensor_id].hasOwnProperty(metric)) {
-                            var value = obj[node_id][sensor_id][metric];
+                    for (var metric in event_data[node_id][sensor_id]) {
+                        if (event_data[node_id][sensor_id].hasOwnProperty(metric)) {
+                            var value = event_data[node_id][sensor_id][metric];
 
                             switch (typeof value) {
                                 case "number":
@@ -43,6 +43,7 @@ function fill_jobs(msg) {
                                     }
                                     break;
                                 case "object":
+                                    // if timestamp is null
                                     if (metric === "exp_timestamp") {
                                         delete jobs[sensor_label + "-expire"];
                                     }
@@ -70,7 +71,7 @@ function fill_jobs(msg) {
             const row = `
             <tr class="table-light">
                 <td>
-                    ${t.toLocaleString(locale)}
+                    ${renderTime(t)}
                 </td>
                 <td>
                     ${res[0]}
@@ -107,12 +108,12 @@ $(document).ready(function () {
 
     // Event handler: server sent all data.
     socket.on('init_response', function (msg) {
-        fill_jobs(msg);
+        render_jobs(msg);
     });
 
     // Event handler for server sent event data.
     socket.on('update_response', function (msg) {
-        fill_jobs(msg);
+        render_jobs(msg);
     });
 });
 

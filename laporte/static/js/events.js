@@ -1,17 +1,7 @@
 /* global 
-    io, locale, followLogs, scrollToBottomAnimate, scrollToBottomInstant,
-    is_same_day
+    io, followLogs, scrollToBottomAnimate, scrollToBottomInstant, renderTime
 */
 
-function render_time(time) {
-    var ret = `${time.toLocaleTimeString(locale)}`;
-    const tnow = new Date();
-
-    if (!is_same_day(time, tnow)) {
-        ret = `${time.toLocaleDateString(locale).replace(/ /g, '&nbsp;')} ` + ret;
-    }
-    return (ret);
-}
 
 function render_value(metric, value) {
     var ret = value;
@@ -26,14 +16,18 @@ function render_value(metric, value) {
             }
             else if (metric.includes("_timestamp")) {
                 const time = new Date(value * 1000);
-                ret = render_time(time);
+                ret = renderTime(time);
             }
             else {
                 ret = `${Math.round(value * 10000) / 10000}`;
             }
             break;
+        case "object":
+            // if exp_timestamp is null
+            if (metric === "exp_timestamp") {
+                ret = "<i>expired</i>";
+            }
     }
-
     return (ret);
 }
 
@@ -42,7 +36,7 @@ var odd_row_fl = false;
 function render_log(log) {
     const { time, event_id, data } = log;
     const tlog = new Date(time * 1000);
-    var tstr = render_time(tlog);
+    var tstr = renderTime(tlog);
     var metrics_total = 0;
     var node_rowspans = {};
     var sensor_rowspans = {};

@@ -1,17 +1,13 @@
 /* global 
-    io, locale, followLogs, scrollToBottomAnimate, is_same_day,
-    logTrClass, htmlEncode, scrollToBottomInstant
+    io, followLogs, scrollToBottomInstant, scrollToBottomAnimate, logTrClass,
+    htmlEncode, renderTime
 */
 
 function render_log(log) {
     const { time, levelname, msg, event_id, funcname, filename, fileno } = log;
     const tlog = new Date(time * 1000);
-    const tnow = new Date();
     const long = msg.length > 320;
-    var tstr = `${tlog.toLocaleTimeString(locale)}`;
-    if (!is_same_day(tlog, tnow)) {
-        tstr = `${tlog.toLocaleDateString(locale).replace(/ /g, '')} ` + tstr;
-    }
+    const tstr = `${renderTime(tlog)}`;
 
     const trclass = logTrClass(levelname);
     const encodedMsg = htmlEncode(msg);

@@ -2,6 +2,30 @@
     unused:false
 */
 
+const locale = navigator.language;
+
+const is_same_day = (date1, date2) => {
+    return (
+        date1.getUTCFullYear() === date2.getUTCFullYear() &&
+        date1.getMonth() === date2.getMonth() &&
+        date1.getDate() === date2.getDate()
+    );
+};
+
+const renderTime = (time) => {
+    var ret = `${time.toLocaleTimeString(locale)}`;
+    const tnow = new Date();
+
+    if (!is_same_day(time, tnow)) {
+        ret = `${time.toLocaleDateString(locale).replace(/ /g, '&nbsp;')} ` + ret;
+    }
+    return (ret);
+};
+
+const fmtMSS = (s) => {
+    return (s - (s %= 60)) / 60 + (9 < s ? ':' : ':0') + s;
+};
+
 const utfChars = '\u00A0-\u9999<>\&';
 const utfEncode = (char) => ('&#' + char.charCodeAt(0) + ';');
 const customEncode = {
@@ -37,19 +61,6 @@ const logTrClass = (level) => {
     return levels[level] || levels.default;
 };
 
-const is_same_day = (date1, date2) => {
-    return (
-        date1.getUTCFullYear() === date2.getUTCFullYear() &&
-        date1.getMonth() === date2.getMonth() &&
-        date1.getDate() === date2.getDate()
-    );
-};
-
-const fmtMSS = (s) => {
-    return (s - (s %= 60)) / 60 + (9 < s ? ':' : ':0') + s;
-};
-
-const locale = navigator.language;
 
 const scrollToElement = (id, speed = 1000) => {
     $("html, body").animate({ scrollTop: $(id).offset().top }, speed);
