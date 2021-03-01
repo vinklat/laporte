@@ -16,65 +16,161 @@ from gevent.pywsgi import WSGIServer, LoggingLogAdapter
 from apscheduler.schedulers.gevent import GeventScheduler
 from prometheus_client.core import REGISTRY
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-from laporte.version import __version__, get_build_info
-from laporte.argparser import get_pars
-from laporte.sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
-from laporte.prometheus import PrometheusMetrics
-
-# create logger
-logger = logging.getLogger(__name__)
+from .version import __version__, get_version_info, get_runtime_info
+from .argparser import get_pars
+from .sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
+from .prometheus import PrometheusMetrics
+from .logger import ConfiguredLogger, LOGS_NAMESPACE
+from .event_id import event_id, request_id
 
 # get parameters from command line arguments
 pars = get_pars()
 
-# set logger
-logging.basicConfig(format='%(levelname)s %(module)s: %(message)s', level=pars.log_level)
-logging.getLogger('apscheduler').setLevel(logging.WARNING)
-if pars.log_level == logging.DEBUG:
-    logging.getLogger('socketio').setLevel(logging.DEBUG)
-    logging.getLogger('engineio').setLevel(logging.DEBUG)
-else:
-    logging.getLogger('socketio').setLevel(logging.WARNING)
-    logging.getLogger('engineio').setLevel(logging.WARNING)
+# create logger
+cl = ConfiguredLogger(__name__, log_level=pars.log_level, log_verbose=pars.log_verbose)
+logger = cl.get_logger()
+
+
+# create Flask application
+class ReverseProxyFix():
+    '''
+    a middleware to fix app errors behind a reverse proxy + https
+    needs protocol scheme stored in X-Forwarded-Proto header
+    '''
+    def __init__(self, flask_app):
+        self.app = flask_app
+
+    def __call__(self, environ, start_response):
+        scheme = environ.get('HTTP_X_FORWARDED_PROTO', '')
+        if scheme:
+            environ['wsgi.url_scheme'] = scheme
+        return self.app(environ, start_response)
+
+
+app = Flask(__name__)
+app.wsgi_app = ReverseProxyFix(app.wsgi_app)
+
+# register API blueprint
+blueprint = Blueprint('api', __name__, url_prefix='/api')
+api = Api(blueprint, doc='/', title='Laporte API', version=__version__)
+bootstrap = Bootstrap(app)
+app.config.SWAGGER_UI_DOC_EXPANSION = 'list'
+app.register_blueprint(blueprint)
 
 # create container objects
-sensors = Sensors()
-metrics = PrometheusMetrics(sensors)
+sensors = Sensors(app, GeventScheduler())
+prom_metrics = PrometheusMetrics(sensors)
+REGISTRY.register(prom_metrics.CustomCollector(prom_metrics))
+cl.prometheus_handler.metrics = prom_metrics
+
+#
+# run functions before and after a request
+#
+
+
+@app.before_request
+@prom_metrics.func_count({'http_message': 'request'})
+def http_request():
+    '''
+    This function will run before every http request.
+    '''
+    request_id.set(request.headers.get('X-Request-ID', None))
+    if pars.log_verbose:
+        logger.info('%s %s', request.method, request.path)
+        logger.debug('headers = "%s"',
+                     str(request.headers).encode("unicode_escape").decode("utf-8"))
+        logger.debug('body = "%s"', request.get_data().decode("utf-8"))
+
+
+@app.after_request
+@prom_metrics.func_count({'http_message': 'response'})
+def http_response(response):
+    '''
+    This function will run after a request, as long as no exceptions occur.
+    '''
+    response.direct_passthrough = False
+
+    # add headers
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    response.headers['Cache-Control'] = 'public, max-age=0'
+    response.headers['X-Request-ID'] = request_id.get()
+
+    prom_metrics.counter_inc({"http_status": str(response.status_code)})
+
+    if pars.log_verbose:
+        logger.info('status = "%s"', response.status)
+        logger.debug('headers = "%s"',
+                     str(response.headers).encode("unicode_escape").decode("utf-8"))
+        logger.debug('body = "%s"', response.get_data().decode("utf-8"))
+
+    return response
+
+
+@app.teardown_request
+def http_response_error(error=None):
+    '''
+    This function will run after a request, regardless if an exception occurs or not.
+    '''
+    if error:
+        # Log the error
+        logger.debug('Exception during request: %s', error)
+        prom_metrics.counter_inc({'http_message': 'response_exception'})
+
+
+#
+# Socket.IO namespaces and handlers
+#
+
+sio = SocketIO(app,
+               async_mode='gevent',
+               logger=pars.log_verbose,
+               engineio_logger=pars.log_verbose,
+               cors_allowed_origins="*")
+sensors.sio = sio
+cl.sio_handler.sio = sio
 
 
 class MetricsNamespace(Namespace):
     '''Socket.IO namespace for set/retrieve metrics of sensors'''
     @staticmethod
-    @metrics.func_measure({'event': 'sensor_response', 'namespace': '/metric'})
+    @prom_metrics.func_measure({'event': 'sensor_response', 'namespace': '/metrics'})
     def on_sensor_response(message):
         '''
         receive metrics of changed sensors identified by node_id/sensor_id
         '''
+        event_id.set(add_prefix='sio_')
 
         for node_id in message:
-            request_form = message[node_id]
-            logger.info('SocketIO message: node_id=%s: data=%s', node_id,
-                        str(request_form))
+            node_data = message[node_id]
+            logger.info('node update event: %s: %s', node_id, str(node_data))
             try:
-                sensors.set_node_values(node_id, request_form)
+                sensors.set_node_values(node_id, node_data)
             except KeyError:
                 pass
 
     @staticmethod
-    @metrics.func_measure({'event': 'sensor_addr_response', 'namespace': '/metric'})
+    @prom_metrics.func_measure({
+        'event': 'sensor_addr_response',
+        'namespace': '/metrics'
+    })
     def on_sensor_addr_response(message):
-        '''receive metrics of changed sensors identified by node_addr/key'''
+        '''
+        receive metrics of changed sensors identified by node_addr/key
+        '''
+        event_id.set(add_prefix='sio_')
+        logger.info('addr/key update event: %s', message)
 
         for node_id, request_form in sensors.conv_addrs_to_ids(message).items():
-            logger.info('SocketIO translated message: node_id=%s: data=%s', node_id,
-                        str(request_form))
+            logger.debug('update %s: %s', node_id, str(request_form))
             try:
                 sensors.set_node_values(node_id, request_form)
             except KeyError:
                 pass
 
     @staticmethod
-    @metrics.func_measure({'event': 'join', 'namespace': '/metric'})
+    @prom_metrics.func_measure({'event': 'join', 'namespace': '/metrics'})
     def on_join(message):
         '''fired upon gateway join'''
 
@@ -84,46 +180,56 @@ class MetricsNamespace(Namespace):
         emit('status_response', {'joined in': rooms()})
         emit('config_response', {gw: list(sensors.get_config_of_gw(gw))})
 
-
-class EventsNamespace(Namespace):
-    '''Socket.IO namespace for events emit'''
     @staticmethod
-    @metrics.func_count({'event': 'connect', 'namespace': '/events'})
-    @metrics.func_measure({'event': 'connect', 'namespace': '/events'})
-    def on_connect():
-        '''emit initital event after a successful connection'''
-
-        data = sensors.get_metrics_dict_by_node(skip_None=False)
-
-        emit('init_response', json.dumps(data), namespace=EVENTS_NAMESPACE)
-
-
-class DefaultNamespace(Namespace):
-    '''Socket.IO namespace for default responses'''
-    @staticmethod
-    @metrics.func_measure({'event': 'connect', 'namespace': '/'})
+    @prom_metrics.func_count({'event': 'connect', 'namespace': '/metrics'})
     def on_connect():
         '''fired upon a successful connection'''
 
         emit('status_response', {'status': 'connected'})
 
 
-# create Flask application
-app = Flask(__name__)
-blueprint = Blueprint('api', __name__, url_prefix='/api')
-api = Api(blueprint, doc='/', title='Laporte API', version=__version__)
-bootstrap = Bootstrap(app)
-app.config.SWAGGER_UI_DOC_EXPANSION = 'list'
-app.register_blueprint(blueprint)
-REGISTRY.register(metrics.CustomCollector(metrics))
-sio = SocketIO(app, async_mode='gevent', engineio_logger=True)
+class EventsNamespace(Namespace):
+    '''Socket.IO namespace for events emit'''
+    @staticmethod
+    @prom_metrics.func_count({'event': 'connect', 'namespace': '/events'})
+    def on_connect():
+        '''emit initital event after a successful connection'''
+
+        init_resp = {'data': sensors.get_metrics_dict_by_node(skip_None=False)}
+        emit('init_response', json.dumps(init_resp), namespace=EVENTS_NAMESPACE)
+        emit('hist_response', json.dumps(sensors.diff_buf), namespace=EVENTS_NAMESPACE)
+
+
+class LogsNamespace(Namespace):
+    '''Socket.IO namespace for emitting logs'''
+    @staticmethod
+    @prom_metrics.func_count({'event': 'connect', 'namespace': '/logs'})
+    def on_connect():
+        '''fired upon a successful connection'''
+
+        emit('hist_response',
+             json.dumps(cl.sio_handler.log_buf),
+             namespace=LOGS_NAMESPACE)
+
+
+class DefaultNamespace(Namespace):
+    '''Socket.IO namespace for default responses'''
+    @staticmethod
+    @prom_metrics.func_count({'event': 'connect', 'namespace': '/'})
+    def on_connect():
+        '''fired upon a successful connection'''
+
+        emit('status_response', {'status': 'connected'})
+
+
 sio.on_namespace(DefaultNamespace('/'))
 sio.on_namespace(MetricsNamespace(METRICS_NAMESPACE))
 sio.on_namespace(EventsNamespace(EVENTS_NAMESPACE))
-sensors.sio = sio
-sensors.scheduler = GeventScheduler()
+sio.on_namespace(LogsNamespace(LOGS_NAMESPACE))
 
+#
 # REST API methods
+#
 
 ns_metrics = api.namespace('metrics',
                            description='methods for manipulating metrics',
@@ -132,7 +238,7 @@ ns_state = api.namespace('state',
                          description='methods for manipulating process state',
                          path='/state')
 ns_info = api.namespace('info',
-                        description='methods to obtain information',
+                        description='methods to obtain application information',
                         path='/info')
 
 parser = api.parser()
@@ -150,22 +256,25 @@ class NodeMetrics(Resource):
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     @api.expect(parser)
-    @metrics.func_measure({'method': 'put', 'location': '/api/metrics/<node_id>'})
+    @prom_metrics.func_measure({'method': 'put', 'location': '/api/metrics/<node_id>'})
     def put(self, node_id):
         '''set sensors of a node'''
-        logger.info("API/set: %s: %s", node_id, str(request.form.to_dict()))
+
+        event_id.set(add_prefix='api_')
+        logger.info("node update request: %s: %s", node_id, str(request.form.to_dict()))
         try:
             ret = sensors.set_node_values(node_id, request.form)
         except KeyError:
             logger.warning("node %s or sensor not found", node_id)
             abort(404)  # sensor not configured
+        event_id.release()
 
         return ret
 
     @api.doc(params={'node_id': 'a node from which to get metrics'})
     @api.response(200, 'Success')
     @api.response(404, 'Node not found')
-    @metrics.func_measure({'method': 'get', 'location': '/api/metrics/<node_id>'})
+    @prom_metrics.func_measure({'method': 'get', 'location': '/api/metrics/<node_id>'})
     def get(self, node_id):
         '''get sensor metrics of a node'''
 
@@ -184,7 +293,10 @@ class IncNodeMetrics(Resource):
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     @api.expect(parser)
-    @metrics.func_measure({'method': 'put', 'location': '/api/metrics/inc/<node_id>'})
+    @prom_metrics.func_measure({
+        'method': 'put',
+        'location': '/api/metrics/inc/<node_id>'
+    })
     def put(self, node_id):
         '''increment sensor values of a node'''
         logger.info("API/inc: %s: %s", node_id, str(request.form.to_dict()))
@@ -206,7 +318,7 @@ class SensorMetrics(Resource):
         })
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
-    @metrics.func_measure({
+    @prom_metrics.func_measure({
         'method': 'get',
         'location': '/api/metrics/<node_id>/<sensor_id>'
     })
@@ -293,9 +405,17 @@ class StateDump(Resource):
 @ns_info.route('/version')
 class InfoVersion(Resource):
     def get(self):
-        '''get app version and resources info'''
+        '''get application version info'''
 
-        return get_build_info()
+        return get_version_info()
+
+
+@ns_info.route('/runtime')
+class InfoRuntime(Resource):
+    def get(self):
+        '''get application runtime resources and info'''
+
+        return get_runtime_info()
 
 
 @ns_info.route('/myip')
@@ -314,47 +434,62 @@ class InfoIP(Resource):
         return ret
 
 
-# Web interface
+#
+# HTML interface
+#
 
 
 @app.route('/')
-@app.route('/sensors')
-@metrics.func_measure({'location': '/sensors'})
-def table():
-    return render_template('sensors.html',
-                           time_locale=pars.time_locale,
+@app.route('/data')
+@prom_metrics.func_measure({'location': '/data'})
+def data():
+    return render_template('data.html',
                            async_mode=sio.async_mode,
                            data=sensors.get_sensors_dump_dict())
 
 
-@app.route('/scheduler')
-@metrics.func_measure({'location': '/scheduler'})
-def scheduler():
-    return render_template('scheduler.html',
-                           time_locale=pars.time_locale,
-                           async_mode=sio.async_mode)
+@app.route('/events')
+def events():
+    return render_template('events.html', async_mode=sio.async_mode)
 
 
-@app.route('/log')
-def log():
-    return render_template('log.html',
-                           time_locale=pars.time_locale,
-                           async_mode=sio.async_mode)
+@app.route('/status/info')
+@prom_metrics.func_measure({'location': '/status/info'})
+def status_info():
+
+    return render_template('info.html', runtime=get_runtime_info())
+
+
+@app.route('/status/scheduler')
+@prom_metrics.func_measure({'location': '/scheduler'})
+def status_scheduler():
+    return render_template('scheduler.html', async_mode=sio.async_mode)
+
+
+@app.route('/status/metrics')
+def status_metrics():
+    return render_template('metrics.html', async_mode=sio.async_mode)
+
+
+@app.route('/status/log')
+def status_log():
+    return render_template('log.html', async_mode=sio.async_mode)
 
 
 @app.route('/doc')
+@api.documentation
+@prom_metrics.func_measure({'location': '/doc'})
 def doc():
-    return render_template('doc.html', async_mode=sio.async_mode)
+    return render_template('doc.html', title=api.title, specs_url=api.specs_url)
 
 
-@app.route('/prom')
-def prom():
-    return render_template('prom.html', async_mode=sio.async_mode)
+#
+# Prometheus export
+#
 
 
-# Prometheus metrics
 @app.route('/metrics')
-def prom_metrics():
+def export_metrics():
     return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
 
 

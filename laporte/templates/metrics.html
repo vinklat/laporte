@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Prometheus Metrics{% endblock %}
+
+{% block content %}
+<div style="padding-top: 3rem">
+<h3>Prometheus metrics</h3>
+<p class="font-weight-light" id="url"></p>
+<div id="metrics" class="text-monospace"></div>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.1/socket.io.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="{{ url_for('static', filename='js/shared.js') }}"> </script>
+<script type="text/javascript" charset="utf-8" src="{{ url_for('static', filename='js/metrics.js') }}"> </script>
+{% endblock %}

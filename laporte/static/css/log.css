@@ -1,0 +1,74 @@
+html {
+    --lh: 1.5em;
+}
+
+.w-10 {
+    width: 10%;
+}
+
+.w-15 {
+    width: 15%;
+}
+
+.w-20 {
+    width: 20%;
+}
+
+.w-40 {
+    width: 40%;
+}
+
+.w-60 {
+    width: 60%;
+}
+
+.table {
+    border-collapse: separate;
+    border-spacing: 0;  
+}
+
+.bg-light th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.sticky-header th{
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+nav.sticky-top + main table.sticky-header th {
+    top: 55px;
+    border-top: 2px solid #dee2e6;
+}
+
+.truncate-overflow {
+    --max-lines: 4;
+    position: relative;
+    max-height: calc(var(--lh) * var(--max-lines));
+    overflow: hidden;
+    cursor: pointer;
+
+}
+
+.truncate-overflow:hover::after {
+    background-color: #ececf6;
+
+}
+.truncate-overflow::after {
+    content: "...more";
+    position: absolute;
+    cursor: pointer;
+    width: 5em;
+    height: var(--lh);
+    top: calc(var(--lh) * calc(var(--max-lines) - 1));
+    right: 0;
+    color: var(--primary);
+    background-color: #fdfdfe;
+    text-align: right;
+}
+
+.odd-row {
+    background-color: #fafafa;
+}

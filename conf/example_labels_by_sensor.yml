@@ -16,7 +16,7 @@
 #  laporte_temp_celsius{device="device2",node="weather1",type="average"} 10.3
 #
 # watch metrics + labels via status page
-#   http://localhost:9128/prom
+#   http://localhost:9128/status/metrics
 
 
 virtual:

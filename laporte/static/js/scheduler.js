@@ -1,3 +1,7 @@
+/* global 
+    io, renderTime
+*/
+
 var jobs = {};
 
 function sort_object(obj) {
@@ -16,42 +20,43 @@ function sort_object(obj) {
     return (sorted_obj);
 }
 
-function fill_jobs(msg) {
-    var obj = JSON.parse(msg);
-    var tnow = new Date();
-    var node_id, sensor_id, metric;
+function render_jobs(msg) {
+    var event_data = JSON.parse(msg).data;
     var out = "";
 
-    for (node_id in obj) {
-        for (sensor_id in obj[node_id]) {
-            var sensor_label = node_id + "-" + sensor_id;
+    for (var node_id in event_data) {
+        if (event_data.hasOwnProperty(node_id)) {
+            for (var sensor_id in event_data[node_id]) {
+                if (event_data[node_id].hasOwnProperty(sensor_id)) {
+                    var sensor_label = node_id + "-" + sensor_id;
+                    for (var metric in event_data[node_id][sensor_id]) {
+                        if (event_data[node_id][sensor_id].hasOwnProperty(metric)) {
+                            var value = event_data[node_id][sensor_id][metric];
 
-            for (metric in obj[node_id][sensor_id]) {
-                //var metric_label = sensor_label + "_" + metric;
-                // var id = "#" + metric_label;
+                            switch (typeof value) {
+                                case "number":
+                                    if (metric === "exp_timestamp") {
+                                        jobs[sensor_label + "-expire"] = value;
+                                    }
+                                    if (metric === "cron_timestamp") {
+                                        jobs[sensor_label + "-cron"] = value;
+                                    }
+                                    break;
+                                case "object":
+                                    // if timestamp is null
+                                    if (metric === "exp_timestamp") {
+                                        delete jobs[sensor_label + "-expire"];
+                                    }
+                                    if (metric === "cron_timestamp") {
+                                        delete jobs[sensor_label + "-cron"];
+                                    }
+                                    break;
+                                default:
+                                    break;
 
-                var value = obj[node_id][sensor_id][metric];
-
-                switch (typeof value) {
-                    case "number":
-                        if (metric == "exp_timestamp") {
-                            jobs[sensor_label + "-expire"] = value;
+                            }
                         }
-                        if (metric == "cron_timestamp") {
-                            jobs[sensor_label + "-cron"] = value;
-                        }
-                        break;
-                    case "object":
-                        if (metric == "exp_timestamp") {
-                            delete jobs[sensor_label + "-expire"];
-                        }
-                        if (metric == "cron_timestamp") {
-                            delete jobs[sensor_label + "-cron"];
-                        }
-                        break;
-                    default:
-                        break;
-
+                    }
                 }
             }
         }
@@ -59,39 +64,56 @@ function fill_jobs(msg) {
 
     var ts;
     for (ts in sort_object(jobs)) {
-        var t = new Date(jobs[ts] * 1000);
-        var res = ts.split("-");
-        var row = "<tr><td>" + t.toLocaleString(time_locale);
-        row += "</td><td>" + res[2];
-        row += "</td><td>" + res[0];
-        row += "</td><td>" + res[1] + "</td></tr>";
-        out = row + out;
+        if (jobs.hasOwnProperty(ts)) {
+
+            var t = new Date(jobs[ts] * 1000);
+            var res = ts.split("-");
+            const row = `
+            <tr class="table-light">
+                <td>
+                    ${renderTime(t)}
+                </td>
+                <td>
+                    ${res[0]}
+                </td>
+                <td>
+                    ${res[1]}
+                </td>
+                <td>
+                    ${res[2]}
+                </td>
+            </tr>
+        `;
+            out = row + out;
+        }
     }
     $('#jobs').html(out);
 }
 
 $(document).ready(function () {
-    var namespace = '/events';
     // Connect to the Socket.IO server.
-    // The connection URL has the following format:
-    //     http[s]://<domain>:<port>[/<namespace>]
-    var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+    const namespace = "/events";
+    const sio_url = `${location.protocol}//${document.domain}:${location.port}${namespace}`;
+    var socket = io.connect(sio_url);
 
     // Event handlers:
     socket.on('connect', function () {
         $('#status').html("connected");
     });
 
+    // Event handler for lost connection.
     socket.on('disconnect', function () {
         $('#status').html("not connected");
     });
 
+    // Event handler: server sent all data.
     socket.on('init_response', function (msg) {
-        fill_jobs(msg);
+        render_jobs(msg);
     });
 
-    socket.on('update_response', function (msg) {
-        fill_jobs(msg);
+    // Event handler for server sent event data.
+    socket.on('event_response', function (msg) {
+        render_jobs(msg);
     });
 });
 

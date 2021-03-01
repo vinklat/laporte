@@ -4,7 +4,7 @@
 import logging
 import os
 from argparse import ArgumentParser, ArgumentTypeError
-from laporte.version import __version__, get_build_info
+from .version import __version__, get_version_info
 
 _LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 
@@ -44,11 +44,11 @@ def get_pars():
         'CONFIG_DIR': {
             'default': 'conf'
         },
-        'TIME_LOCALE': {
-            'default': 'en-US'
-        },
         'LOG_LEVEL': {
             'default': 'DEBUG'
+        },
+        'LOG_VERBOSE': {
+            'default': False
         },
     }
 
@@ -102,18 +102,10 @@ def get_pars():
                         dest='config_jinja',
                         help='use jinja2 in yaml config file',
                         **env_vars['CONFIG_JINJA'])
-    parser.add_argument('-t',
-                        '--time-locale',
-                        action='store',
-                        dest='time_locale',
-                        help='time formatting locale (default {0})'.format(
-                            env_vars['TIME_LOCALE']['default']),
-                        type=str,
-                        **env_vars['TIME_LOCALE'])
     parser.add_argument('-V',
                         '--version',
                         action='version',
-                        version=str(get_build_info()))
+                        version=str(get_version_info()))
     parser.add_argument('-l',
                         '--log-level',
                         action='store',
@@ -123,4 +115,11 @@ def get_pars():
                                                    env_vars['LOG_LEVEL']['default']),
                         type=log_level_string_to_int,
                         **env_vars['LOG_LEVEL'])
+    parser.add_argument('-v',
+                        '--log-verbose',
+                        action='store_true',
+                        dest='log_verbose',
+                        help='most verbose debug level '
+                        '(console only; useful for a bug hunt :)',
+                        **env_vars['LOG_VERBOSE'])
     return parser.parse_args()

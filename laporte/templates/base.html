@@ -5,12 +5,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>{{ appname }} - {% block title %}{% endblock %}</title>
+    <title>{{ appname }} {% block title %}{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    {% block styles %}
+    <!-- Bootstrap CSS -->
     {{ bootstrap.load_css() }}
+    {% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
                 aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -18,11 +21,20 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav mr-auto">
                 <a class="navbar-brand mb-0 h1" href="#">{{ appname }}</a>
-                {{ render_nav_item('table', 'Sensors', use_li=True) }}
-                {{ render_nav_item('scheduler', 'Scheduler', use_li=True) }}
-                {{ render_nav_item('log', 'Log', use_li=True) }}
-                {{ render_nav_item('prom', 'Metrics', use_li=True) }}
-                {{ render_nav_item('doc', 'API', use_li=True) }}
+                {{ render_nav_item('data', 'Data', use_li=True) }}
+                {{ render_nav_item('events', 'Events', use_li=True) }}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      Status
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                        <a class="dropdown-item" href="{{ url_for('status_info' )}}">Runtime & Build Information</a>
+                        <a class="dropdown-item" href="{{ url_for('status_scheduler' )}}">Event Scheduler</a>
+                        <a class="dropdown-item" href="{{ url_for('status_metrics' )}}">Prometheus Metrics</a>
+                        <a class="dropdown-item" href="{{ url_for('status_log' )}}">Application Log</a>
+                    </div>
+                </li>                                    
+                {{ render_nav_item('doc', 'Documentation', use_li=True) }}
             </ul>
             <span class="navbar-text" id="status"></span>
         </div>
