@@ -131,17 +131,33 @@ class EventsNamespace(socketio.ClientNamespace):
     init_handler = default_init_handler
     update_handler = default_update_handler
 
-    def on_init_response(self, data):
+    def on_init_response(self, json_msg):
         '''receive update of nodes from laporte'''
+
+        msg = json.loads(json_msg)
+        try:
+            data = msg['data']
+        except KeyError as exc:
+            logging.error('invalid message: %s', exc)
+            return
 
         c_responses_total.labels('init_response', EVENTS_NAMESPACE).inc()
-        self.init_handler(json.loads(data))
+        self.init_handler(data)
 
-    def on_update_response(self, data):
-        '''receive update of nodes from laporte'''
+    def on_event_response(self, json_msg):
+        '''receive update of nodes event from laporte'''
 
-        c_responses_total.labels('update_response', EVENTS_NAMESPACE).inc()
-        for node_id, metrics in json.loads(data).items():
+        msg = json.loads(json_msg)
+        try:
+            # time = msg['time']
+            # event_id = msg['event_id']
+            data = msg['data']
+        except KeyError as exc:
+            logging.error('invalid message: %s', exc)
+            return
+
+        c_responses_total.labels('event_response', EVENTS_NAMESPACE).inc()
+        for node_id, metrics in data.items():
             self.update_handler(node_id, metrics)
 
     @staticmethod
