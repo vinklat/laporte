@@ -6,6 +6,7 @@ custom logging filters and handlers
 import logging
 import json
 from .event_id import event_id
+from .prometheus import metrics, log_message_metric
 
 LOGS_NAMESPACE = '/logs'
 MAX_LOGBUF_ITEMS = 2048
@@ -15,17 +16,15 @@ class PrometheusHandler(logging.StreamHandler):
     '''
     a logging.StreamHandler that counts logs
     '''
-    def __init__(self, metrics=None):
+    def __init__(self):
         logging.StreamHandler.__init__(self)
-        self.metrics = metrics
 
     def emit(self, record):
         # don't count sio log emits
         if 'log_response' in record.args:
             return
 
-        if self.metrics is not None:
-            self.metrics.counter_inc({'loglevel': record.levelname})
+        metrics.counter_inc(**log_message_metric, labels={'loglevel': record.levelname})
 
 
 class SioHandler(logging.StreamHandler):

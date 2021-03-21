@@ -19,9 +19,11 @@ from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from .version import __version__, get_version_info, get_runtime_info
 from .argparser import get_pars
 from .sensors import Sensors, METRICS_NAMESPACE, EVENTS_NAMESPACE
-from .prometheus import PrometheusMetrics
 from .logger import ConfiguredLogger, LOGS_NAMESPACE
 from .event_id import event_id, request_id
+from .prometheus import (metrics, http_duration_metric, socketio_duration_metric,
+                         http_requests_metric, http_responses_metric,
+                         http_exception_responses_metric)
 
 # get parameters from command line arguments
 pars = get_pars()
@@ -59,9 +61,8 @@ app.register_blueprint(blueprint)
 
 # create container objects
 sensors = Sensors(app, GeventScheduler())
-prom_metrics = PrometheusMetrics(sensors)
-REGISTRY.register(prom_metrics.CustomCollector(prom_metrics))
-cl.prometheus_handler.metrics = prom_metrics
+metrics.sensors = sensors
+REGISTRY.register(metrics.CustomCollector(metrics))
 
 #
 # run functions before and after a request
@@ -69,7 +70,7 @@ cl.prometheus_handler.metrics = prom_metrics
 
 
 @app.before_request
-@prom_metrics.func_count({'http_message': 'request'})
+@metrics.func_count(**http_requests_metric)
 def http_request():
     '''
     This function will run before every http request.
@@ -83,7 +84,6 @@ def http_request():
 
 
 @app.after_request
-@prom_metrics.func_count({'http_message': 'response'})
 def http_response(response):
     '''
     This function will run after a request, as long as no exceptions occur.
@@ -97,7 +97,8 @@ def http_response(response):
     response.headers['Cache-Control'] = 'public, max-age=0'
     response.headers['X-Request-ID'] = request_id.get()
 
-    prom_metrics.counter_inc({"http_status": str(response.status_code)})
+    metrics.counter_inc(**http_responses_metric,
+                        labels={'status': str(response.status_code)})
 
     if pars.log_verbose:
         logger.info('status = "%s"', response.status)
@@ -116,7 +117,7 @@ def http_response_error(error=None):
     if error:
         # Log the error
         logger.debug('Exception during request: %s', error)
-        prom_metrics.counter_inc({'http_message': 'response_exception'})
+        metrics.counter_inc(**http_exception_responses_metric)
 
 
 #
@@ -135,7 +136,11 @@ cl.sio_handler.sio = sio
 class MetricsNamespace(Namespace):
     '''Socket.IO namespace for set/retrieve metrics of sensors'''
     @staticmethod
-    @prom_metrics.func_measure({'event': 'sensor_response', 'namespace': '/metrics'})
+    @metrics.func_measure(**socketio_duration_metric,
+                          labels={
+                              'event': 'sensor_response',
+                              'namespace': METRICS_NAMESPACE
+                          })
     def on_sensor_response(message):
         '''
         receive metrics of changed sensors identified by node_id/sensor_id
@@ -151,10 +156,11 @@ class MetricsNamespace(Namespace):
                 pass
 
     @staticmethod
-    @prom_metrics.func_measure({
-        'event': 'sensor_addr_response',
-        'namespace': '/metrics'
-    })
+    @metrics.func_measure(**socketio_duration_metric,
+                          labels={
+                              'event': 'sensor_addr_response',
+                              'namespace': METRICS_NAMESPACE
+                          })
     def on_sensor_addr_response(message):
         '''
         receive metrics of changed sensors identified by node_addr/key
@@ -170,7 +176,11 @@ class MetricsNamespace(Namespace):
                 pass
 
     @staticmethod
-    @prom_metrics.func_measure({'event': 'join', 'namespace': '/metrics'})
+    @metrics.func_measure(**socketio_duration_metric,
+                          labels={
+                              'event': 'join',
+                              'namespace': METRICS_NAMESPACE
+                          })
     def on_join(message):
         '''fired upon gateway join'''
 
@@ -181,7 +191,11 @@ class MetricsNamespace(Namespace):
         emit('config_response', {gw: list(sensors.get_config_of_gw(gw))})
 
     @staticmethod
-    @prom_metrics.func_count({'event': 'connect', 'namespace': '/metrics'})
+    @metrics.func_measure(**socketio_duration_metric,
+                          labels={
+                              'event': 'connect',
+                              'namespace': METRICS_NAMESPACE
+                          })
     def on_connect():
         '''fired upon a successful connection'''
 
@@ -191,7 +205,11 @@ class MetricsNamespace(Namespace):
 class EventsNamespace(Namespace):
     '''Socket.IO namespace for events emit'''
     @staticmethod
-    @prom_metrics.func_count({'event': 'connect', 'namespace': '/events'})
+    @metrics.func_measure(**socketio_duration_metric,
+                          labels={
+                              'event': 'connect',
+                              'namespace': EVENTS_NAMESPACE
+                          })
     def on_connect():
         '''emit initital event after a successful connection'''
 
@@ -203,7 +221,11 @@ class EventsNamespace(Namespace):
 class LogsNamespace(Namespace):
     '''Socket.IO namespace for emitting logs'''
     @staticmethod
-    @prom_metrics.func_count({'event': 'connect', 'namespace': '/logs'})
+    @metrics.func_measure(**socketio_duration_metric,
+                          labels={
+                              'event': 'connect',
+                              'namespace': LOGS_NAMESPACE
+                          })
     def on_connect():
         '''fired upon a successful connection'''
 
@@ -215,7 +237,11 @@ class LogsNamespace(Namespace):
 class DefaultNamespace(Namespace):
     '''Socket.IO namespace for default responses'''
     @staticmethod
-    @prom_metrics.func_count({'event': 'connect', 'namespace': '/'})
+    @metrics.func_measure(**socketio_duration_metric,
+                          labels={
+                              'event': 'connect',
+                              'namespace': '/'
+                          })
     def on_connect():
         '''fired upon a successful connection'''
 
@@ -256,7 +282,11 @@ class NodeMetrics(Resource):
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     @api.expect(parser)
-    @prom_metrics.func_measure({'method': 'put', 'location': '/api/metrics/<node_id>'})
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'put',
+                              'location': '/api/metrics/<node_id>'
+                          })
     def put(self, node_id):
         '''set sensors of a node'''
 
@@ -274,7 +304,11 @@ class NodeMetrics(Resource):
     @api.doc(params={'node_id': 'a node from which to get metrics'})
     @api.response(200, 'Success')
     @api.response(404, 'Node not found')
-    @prom_metrics.func_measure({'method': 'get', 'location': '/api/metrics/<node_id>'})
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/metrics/<node_id>'
+                          })
     def get(self, node_id):
         '''get sensor metrics of a node'''
 
@@ -293,10 +327,11 @@ class IncNodeMetrics(Resource):
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
     @api.expect(parser)
-    @prom_metrics.func_measure({
-        'method': 'put',
-        'location': '/api/metrics/inc/<node_id>'
-    })
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'put',
+                              'location': '/api/metrics/inc/<node_id>'
+                          })
     def put(self, node_id):
         '''increment sensor values of a node'''
         logger.info("API/inc: %s: %s", node_id, str(request.form.to_dict()))
@@ -318,10 +353,11 @@ class SensorMetrics(Resource):
         })
     @api.response(200, 'Success')
     @api.response(404, 'Node or sensor not found')
-    @prom_metrics.func_measure({
-        'method': 'get',
-        'location': '/api/metrics/<node_id>/<sensor_id>'
-    })
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/metrics/inc/<node_id>'
+                          })
     def get(self, search_node_id, search_sensor_id):
         '''get metrics of one sensor'''
 
@@ -337,6 +373,11 @@ class SensorMetrics(Resource):
 
 @ns_metrics.route('/')
 class SensorsMetricsList(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/metrics'
+                          })
     def get(self):
         '''get a list of all metrics'''
 
@@ -345,6 +386,11 @@ class SensorsMetricsList(Resource):
 
 @ns_metrics.route('/by_gw')
 class SensorsMetricsByGw(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/metrics/by_gw'
+                          })
     def get(self):
         '''get all metrics sorted by gateway / node_id / sensor_id'''
 
@@ -353,6 +399,11 @@ class SensorsMetricsByGw(Resource):
 
 @ns_metrics.route('/by_node')
 class SensorsMetricsByNode(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/metrics/by_node'
+                          })
     def get(self):
         '''get all metrics sorted by node_id / sensor_id'''
 
@@ -361,6 +412,11 @@ class SensorsMetricsByNode(Resource):
 
 @ns_metrics.route('/by_sensor')
 class SensorsMetricsBySensor(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/metrics/by_sensor'
+                          })
     def get(self):
         '''get all metrics sorted by sensor_id'''
 
@@ -369,6 +425,11 @@ class SensorsMetricsBySensor(Resource):
 
 @ns_metrics.route('/default')
 class StateDefault(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'put',
+                              'location': '/api/state/default'
+                          })
     def put(self):
         '''reset state of all sensors to default value
            (reset metric "value")'''
@@ -378,6 +439,11 @@ class StateDefault(Resource):
 
 @ns_metrics.route('/reset')
 class StateReset(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'put',
+                              'location': '/api/state/reset'
+                          })
     def put(self):
         '''reset state and metadata of all sensors
            (reset metrics "value", "hits_total",
@@ -388,6 +454,11 @@ class StateReset(Resource):
 
 @ns_state.route('/reload')
 class StateReload(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'put',
+                              'location': '/api/state/reload'
+                          })
     def put(self):
         '''reload laporte configuration'''
 
@@ -396,6 +467,11 @@ class StateReload(Resource):
 
 @ns_state.route('/dump')
 class StateDump(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/state/dump'
+                          })
     def get(self):
         '''get all data of all sensors'''
 
@@ -404,6 +480,11 @@ class StateDump(Resource):
 
 @ns_info.route('/version')
 class InfoVersion(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/info/version'
+                          })
     def get(self):
         '''get application version info'''
 
@@ -412,6 +493,11 @@ class InfoVersion(Resource):
 
 @ns_info.route('/runtime')
 class InfoRuntime(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/info/runtime'
+                          })
     def get(self):
         '''get application runtime resources and info'''
 
@@ -420,6 +506,11 @@ class InfoRuntime(Resource):
 
 @ns_info.route('/myip')
 class InfoIP(Resource):
+    @metrics.func_measure(**http_duration_metric,
+                          labels={
+                              'method': 'get',
+                              'location': '/api/info/myip'
+                          })
     def get(self):
         '''show my IP address + other client info'''
 
@@ -441,7 +532,11 @@ class InfoIP(Resource):
 
 @app.route('/')
 @app.route('/data')
-@prom_metrics.func_measure({'location': '/data'})
+@metrics.func_measure(**http_duration_metric,
+                      labels={
+                          'method': 'get',
+                          'location': '/data'
+                      })
 def data():
     return render_template('data.html',
                            async_mode=sio.async_mode,
@@ -449,36 +544,63 @@ def data():
 
 
 @app.route('/events')
+@metrics.func_measure(**http_duration_metric,
+                      labels={
+                          'method': 'get',
+                          'location': '/events'
+                      })
 def events():
     return render_template('events.html', async_mode=sio.async_mode)
 
 
 @app.route('/status/info')
-@prom_metrics.func_measure({'location': '/status/info'})
+@metrics.func_measure(**http_duration_metric,
+                      labels={
+                          'method': 'get',
+                          'location': '/status/info'
+                      })
 def status_info():
 
     return render_template('info.html', runtime=get_runtime_info())
 
 
 @app.route('/status/scheduler')
-@prom_metrics.func_measure({'location': '/scheduler'})
+@metrics.func_measure(**http_duration_metric,
+                      labels={
+                          'method': 'get',
+                          'location': '/status/scheduler'
+                      })
 def status_scheduler():
     return render_template('scheduler.html', async_mode=sio.async_mode)
 
 
 @app.route('/status/metrics')
+@metrics.func_measure(**http_duration_metric,
+                      labels={
+                          'method': 'get',
+                          'location': '/status/metrics'
+                      })
 def status_metrics():
     return render_template('metrics.html', async_mode=sio.async_mode)
 
 
 @app.route('/status/log')
+@metrics.func_measure(**http_duration_metric,
+                      labels={
+                          'method': 'get',
+                          'location': '/status/log'
+                      })
 def status_log():
     return render_template('log.html', async_mode=sio.async_mode)
 
 
 @app.route('/doc')
+@metrics.func_measure(**http_duration_metric,
+                      labels={
+                          'method': 'get',
+                          'location': '/doc'
+                      })
 @api.documentation
-@prom_metrics.func_measure({'location': '/doc'})
 def doc():
     return render_template('doc.html', title=api.title, specs_url=api.specs_url)
 

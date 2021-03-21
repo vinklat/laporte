@@ -6,7 +6,7 @@ from platform import python_version
 import os
 import pkg_resources
 
-__version__ = '0.7.0'
+__version__ = '0.7.1rc0'
 
 start_timestamp = datetime.now().isoformat()
 

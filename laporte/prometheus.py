@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-objects for Prometheus metrics
+Prometheus metrics containers and decorators
 '''
 
 import logging
@@ -15,79 +15,218 @@ from .version import __version__
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
-EXPORTER_NAME = 'laporte'
+DEFAULT_PREFIX = 'laporte'
+
+default_duration_metric = {
+    'prefix': DEFAULT_PREFIX,
+    'name': 'duration',
+    'suffix': 'seconds',
+    'help_str': 'duration of the operation'
+}
+
+default_counter_metric = {
+    'prefix': DEFAULT_PREFIX,
+    'name': 'counter',
+    'suffix': 'total',
+    'help_str': 'number of operation calls'
+}
+
+log_message_metric = {
+    'prefix': DEFAULT_PREFIX,
+    'name': 'log_messages',
+    'suffix': 'total',
+    'help_str': 'number of messages logged'
+}
+
+http_duration_metric = {
+    'prefix': 'http',
+    'name': 'request_duration',
+    'suffix': 'seconds',
+    'help_str': 'duration of http request'
+}
+
+http_requests_metric = {
+    'prefix': 'http',
+    'name': 'requests',
+    'suffix': 'total',
+    'help_str': 'number of http requests received'
+}
+
+http_responses_metric = {
+    'prefix': 'http',
+    'name': 'responses',
+    'suffix': 'total',
+    'help_str': 'number of http responses sent'
+}
+
+http_exception_responses_metric = {
+    'prefix': 'http',
+    'name': 'exception_responses',
+    'suffix': 'total',
+    'help_str': 'number of exceptions during http responses'
+}
+
+socketio_duration_metric = {
+    'prefix': 'socketio',
+    'name': 'event_duration',
+    'suffix': 'seconds',
+    'help_str': 'duration of Socket.IO event'
+}
 
 
 class PrometheusMetrics:
-    durations = {}
-    counters = {}
+    '''
+    Prometheus metrics containers and decorators
+    '''
+    def __init__(self):
+        self.counters = {}
+        self.summaries = {}
 
-    def __init__(self, sensors):
-        self.sensors = sensors
+    def func_measure(self,
+                     prefix=default_duration_metric['prefix'],
+                     name=default_duration_metric['name'],
+                     suffix=default_duration_metric['suffix'],
+                     help_str=default_duration_metric['help_str'],
+                     labels=None,
+                     log=False):
+        '''
+        Update duration (summary) of any function with this decorator is called.
 
-    def func_measure(self, labels, log=False):
+        Args:
+            prefix (str): single-word prefix relevant to the domain the metric belongs to
+            name (str): represent a measured metric
+            suffix (str): describing the unit, in plural form
+            help_str (str): help_str string will aid users track back to what the metric was
+            labels (dict): to differentiate the characteristics of the thing that is being measured
+            log (bool): log measured value to python logger (loglevel INFO)
+        Returns:
+            Decorator.
         '''
-        update duration (summary) of any function with this decorator is called
-        '''
+        if labels is None:  # because {} is dangerous default value
+            labels = {}
+
         def decorator(func):
             @wraps(func)
             def _time_it(*args, **kwargs):
                 start_t = time()
+
                 try:
                     return func(*args, **kwargs)
                 finally:
-                    labels_key = 'duration_' + str(
-                        list(map(itemgetter(0), labels.items())))
-                    values_key = str(list(map(itemgetter(1), labels.items())))
+                    metric_name = f'{prefix}_{name}_{suffix}'
+                    label_keys = str(list(map(itemgetter(0), labels.items())))
+                    label_values = str(list(map(itemgetter(1), labels.items())))
+                    metric_id = metric_name + label_keys
 
-                    if labels_key not in self.durations:
-                        self.durations[labels_key] = {}
-                    if values_key not in self.durations[labels_key]:
-                        self.durations[labels_key][values_key] = {
+                    if metric_id not in self.summaries:
+                        self.summaries[metric_id] = {}
+
+                    if label_values not in self.summaries[metric_id]:
+                        self.summaries[metric_id][label_values] = {
                             'count': 0,
                             'sum': 0.0,
-                            'labels': labels
+                            'labels': labels,
+                            'help_str': help_str
                         }
 
                     duration = time() - start_t
-                    self.durations[labels_key][values_key]['count'] += 1
-                    self.durations[labels_key][values_key]['sum'] += duration
+                    self.summaries[metric_id][label_values]['count'] += 1
+                    self.summaries[metric_id][label_values]['sum'] += duration
                     if log:
-                        logging.debug("duration %s: %0.4fs", labels, duration)
+                        logging.debug("duration %s %s: %0.4fs", metric_name, labels,
+                                      duration)
 
             return _time_it
 
         return decorator
 
-    def func_count(self, labels):
+    def func_count(self,
+                   step=1,
+                   prefix=default_counter_metric['prefix'],
+                   name=default_counter_metric['name'],
+                   suffix=default_counter_metric['suffix'],
+                   help_str=default_counter_metric['help_str'],
+                   labels=None,
+                   log=False):
         '''
-        update number of times any function with this decorator is called
+        Update number of times any function with this decorator is called.
+
+        Args:
+            prefix (str): single-word prefix relevant to the domain the metric belongs to
+            name (str): represent a measured metric
+            suffix (str): counter has _total as a suffix in addition to the metric unit
+            help_str (str): help_str string will aid users track back to what the metric was
+            labels (dict): to differentiate the characteristics of the thing that is being measured
+            log (bool): log measured value to python logger (loglevel INFO)
+        Returns:
+            Decorator.
         '''
+
+        if labels is None:  # because {} is dangerous default value
+            labels = {}
+
         def decorator(func):
             @wraps(func)
-            def _inc_count(*args, **kwargs):
+            def _counter_inc(*args, **kwargs):
                 try:
                     return func(*args, **kwargs)
                 finally:
-                    self.counter_inc(labels)
+                    self.counter_inc(step=step,
+                                     prefix=prefix,
+                                     name=name,
+                                     suffix=suffix,
+                                     labels=labels,
+                                     help_str=help_str,
+                                     log=log)
 
-            return _inc_count
+            return _counter_inc
 
         return decorator
 
-    def counter_inc(self, labels):
+    def counter_inc(self,
+                    step=1,
+                    prefix=default_counter_metric['prefix'],
+                    name=default_counter_metric['name'],
+                    suffix=default_counter_metric['suffix'],
+                    help_str=default_counter_metric['help_str'],
+                    labels=None,
+                    log=False):
         '''
-        update counter
+        Incremet the accumulating counter.
+
+        Args:
+            prefix (str): single-word prefix relevant to the domain the metric belongs to
+            name (str): represent a measured metric
+            suffix (str): counter has _total as a suffix in addition to the metric unit
+            help_str (str): help_str string will aid users track back to what the metric was
+            labels (dict): to differentiate the characteristics of the thing that is being measured
+            log (bool): log measured value to python logger (loglevel INFO)
+        Returns:
+            None.
         '''
-        labels_key = 'counts_' + str(list(map(itemgetter(0), labels.items())))
-        values_key = str(list(map(itemgetter(1), labels.items())))
 
-        if labels_key not in self.counters:
-            self.counters[labels_key] = {}
-        if values_key not in self.counters[labels_key]:
-            self.counters[labels_key][values_key] = {'total': 0, 'labels': labels}
+        if labels is None:  # because {} is dangerous default value
+            labels = {}
 
-        self.counters[labels_key][values_key]['total'] += 1
+        metric_name = '{}_{}_{}'.format(prefix, name, suffix)
+        label_keys = str(list(map(itemgetter(0), labels.items())))
+        label_values = str(list(map(itemgetter(1), labels.items())))
+        metric_id = metric_name + label_keys
+
+        if metric_id not in self.counters:
+            self.counters[metric_id] = {}
+
+        if label_values not in self.counters[metric_id]:
+            self.counters[metric_id][label_values] = {
+                'total': 0,
+                'labels': labels,
+                'help_str': help_str
+            }
+
+        self.counters[metric_id][label_values]['total'] += step
+        if log:
+            logging.debug("total count of %s %s: %f", metric_name, labels,
+                          self.counters[metric_id][label_values]['total'])
 
     class CustomCollector():
         def __init__(self, inner_metrics):
@@ -95,52 +234,53 @@ class PrometheusMetrics:
 
         def collect(self):
 
-            # laporte version info
+            # Laporte versison info
             families = {
                 "0":
-                InfoMetricFamily(EXPORTER_NAME,
+                InfoMetricFamily(DEFAULT_PREFIX,
                                  'Laporte version',
                                  value={'version': __version__})
             }
 
             # dump stored durations
-            for labels_key, labels_data in self.metrics.durations.items():
+            for metric_id, labels_data in self.metrics.summaries.items():
                 for _, values_data in labels_data.items():  # unused values_key
                     count = values_data['count']
                     summ = values_data['sum']
                     labels = values_data['labels']
 
-                    if labels_key not in families:
+                    if metric_id not in families:
                         label_keys = list(map(itemgetter(0), labels.items()))
-
-                        met = SummaryMetricFamily(EXPORTER_NAME + '_duration_seconds',
-                                                  'counter and duration of runs of '
-                                                  'function with labels ' +
-                                                  str(label_keys),
+                        help_str = '{} (labels: {})'.format(
+                            values_data['help_str'], ', '.join(
+                                label_keys)) if label_keys else values_data['help_str']
+                        met = SummaryMetricFamily(metric_id.split('[')[0],
+                                                  help_str,
                                                   labels=label_keys)
-                        families[labels_key] = met
+                        families[metric_id] = met
                     else:
-                        met = families[labels_key]
+                        met = families[metric_id]
 
                     label_values = list(map(itemgetter(1), labels.items()))
                     met.add_metric(label_values, count, summ)
 
             # dump stored counters
-            for labels_key, labels_data in self.metrics.counters.items():
+            for metric_id, labels_data in self.metrics.counters.items():
                 for _, values_data in labels_data.items():  # unused values_key
                     total = values_data['total']
                     labels = values_data['labels']
 
-                    if labels_key not in families:
+                    if metric_id not in families:
                         label_keys = list(map(itemgetter(0), labels.items()))
-
-                        met = CounterMetricFamily(EXPORTER_NAME + '_count_total',
-                                                  'counter of something with labels ' +
-                                                  str(label_keys),
+                        help_str = '{} (labels: {})'.format(
+                            values_data['help_str'], ', '.join(
+                                label_keys)) if label_keys else values_data['help_str']
+                        met = CounterMetricFamily(metric_id.split('[')[0],
+                                                  help_str,
                                                   labels=label_keys)
-                        families[labels_key] = met
+                        families[metric_id] = met
                     else:
-                        met = families[labels_key]
+                        met = families[metric_id]
 
                     label_values = list(map(itemgetter(1), labels.items()))
                     met.add_metric(label_values, total)
@@ -152,23 +292,18 @@ class PrometheusMetrics:
 
                 for (name, metric_type, value, labels, labels_data,
                      prefix) in sensor.get_promexport_data():
-                    uniqname = name + '_' + '_'.join(labels)
-                    if uniqname not in families:
-                        if prefix is None:
-                            metric_name = '{}_{}'.format(EXPORTER_NAME, name)
-                        elif prefix == "":
-                            metric_name = name
-                        else:
-                            metric_name = '{}_{}'.format(prefix, name)
+                    if prefix is None:
+                        metric_name = f'{DEFAULT_PREFIX}_{name}'
+                    else:
+                        metric_name = f'{prefix}_{name}' if prefix else name
 
+                    uniqname = f'{metric_name}_' + '_'.join(labels)
+                    if uniqname not in families:
+                        help_str = 'with labels: {}'.format(', '.join(labels))
                         if metric_type == COUNTER:
-                            x = CounterMetricFamily(metric_name,
-                                                    'with labels: ' + ', '.join(labels),
-                                                    labels=labels)
+                            x = CounterMetricFamily(metric_name, help_str, labels=labels)
                         else:
-                            x = GaugeMetricFamily(metric_name,
-                                                  'with labels: ' + ', '.join(labels),
-                                                  labels=labels)
+                            x = GaugeMetricFamily(metric_name, help_str, labels=labels)
                         families[uniqname] = x
                     else:
                         x = families[uniqname]
@@ -177,3 +312,6 @@ class PrometheusMetrics:
 
             for family in sorted(families, key=str.lower):
                 yield families[family]
+
+
+metrics = PrometheusMetrics()
