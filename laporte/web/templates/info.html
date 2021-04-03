@@ -4,7 +4,7 @@
 {% block styles %}
 {{super()}}
 <!-- Logs CSS -->
-<link rel="stylesheet" href="{{url_for('static', filename='css/log.css')}}">
+<link rel="stylesheet" href="{{url_for('web.static', filename='css/log.css')}}">
 {% endblock %}
 
 {% block content %}

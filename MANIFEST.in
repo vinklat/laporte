@@ -1,2 +1,2 @@
-recursive-include laporte/templates *
-recursive-include laporte/static *
+recursive-include laporte/web/templates *
+recursive-include laporte/web/static *

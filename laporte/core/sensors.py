@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-'''objects that collect sets of sensors'''
+'''
+Object that contains sets of sensors
+'''
 
 import logging
 import json
@@ -10,8 +12,8 @@ from jinja2 import (Environment, FileSystemLoader, TemplateSyntaxError, Template
 from yaml import safe_load, YAMLError
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
-from .version import __version__
-from .event_id import event_id
+from ..version import __version__
+from ..app import event_id
 from .sensor import (Gauge, Counter, Binary, Message, SENSOR, ACTUATOR, GAUGE, COUNTER,
                      BINARY)
 
@@ -30,7 +32,7 @@ MAX_EVENTBUF_ITEMS = 2048
 
 
 class Sensors():
-    '''container to store a set of sensors'''
+    '''Container to store a set of sensors'''
     def reset(self):
         self.node_id_index = {}
         self.node_template_index = {}
@@ -38,9 +40,9 @@ class Sensors():
         self.sensor_index = []
         self.diff_buf = []
 
-    def __init__(self, app, scheduler):
+    def __init__(self, app, sio, scheduler):
         self.reset()
-        self.sio = None
+        self.sio = sio
         self.scheduler = None
         self.prev_data = {}
         self.app = app

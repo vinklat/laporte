@@ -7,6 +7,7 @@ import os
 import pkg_resources
 
 __version__ = '0.7.1rc0'
+app_name = 'laporte'
 
 start_timestamp = datetime.now().isoformat()
 

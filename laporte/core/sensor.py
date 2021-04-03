@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-'''objects that collect config and internal states of one sensor'''
+'''
+Objects that collect internal states (and config) of one sensor
+'''
 
 import logging
 import re

@@ -3,7 +3,7 @@
 {% block styles %}
 {{super()}}
 <!-- Logs CSS -->
-<link rel="stylesheet" href="{{url_for('static', filename='css/log.css')}}">
+<link rel="stylesheet" href="{{url_for('web.static', filename='css/log.css')}}">
 {% endblock %}
 
 {% block content %}
@@ -23,6 +23,6 @@
 
 {% block script %}
 <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.1/socket.io.min.js"></script>
-<script type="text/javascript" charset="utf-8" src="{{ url_for('static', filename='js/shared.js') }}"> </script>
-<script type="text/javascript" charset="utf-8" src="{{ url_for('static', filename='js/scheduler.js') }}"> </script>
+<script type="text/javascript" charset="utf-8" src="{{ url_for('web.static', filename='js/shared.js') }}"> </script>
+<script type="text/javascript" charset="utf-8" src="{{ url_for('web.static', filename='js/scheduler.js') }}"> </script>
 {% endblock %}

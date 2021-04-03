@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>{{ appname }} {% block title %}{% endblock %}</title>
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="icon" href="{{ url_for('web.static', filename='favicon.svg') }}">
     {% block styles %}
     <!-- Bootstrap CSS -->
     {{ bootstrap.load_css() }}
@@ -21,20 +21,20 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav mr-auto">
                 <a class="navbar-brand mb-0 h1" href="#">{{ appname }}</a>
-                {{ render_nav_item('data', 'Data', use_li=True) }}
-                {{ render_nav_item('events', 'Events', use_li=True) }}
+                {{ render_nav_item('web.data', 'Data', use_li=True) }}
+                {{ render_nav_item('web.events', 'Events', use_li=True) }}
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                       Status
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                        <a class="dropdown-item" href="{{ url_for('status_info' )}}">Runtime & Build Information</a>
-                        <a class="dropdown-item" href="{{ url_for('status_scheduler' )}}">Event Scheduler</a>
-                        <a class="dropdown-item" href="{{ url_for('status_metrics' )}}">Prometheus Metrics</a>
-                        <a class="dropdown-item" href="{{ url_for('status_log' )}}">Application Log</a>
+                        <a class="dropdown-item" href="{{ url_for('web.status_info' )}}">Runtime & Build Information</a>
+                        <a class="dropdown-item" href="{{ url_for('web.status_scheduler' )}}">Event Scheduler</a>
+                        <a class="dropdown-item" href="{{ url_for('web.status_metrics' )}}">Prometheus Metrics</a>
+                        <a class="dropdown-item" href="{{ url_for('web.status_log' )}}">Application Log</a>
                     </div>
                 </li>                                    
-                {{ render_nav_item('doc', 'Documentation', use_li=True) }}
+                {{ render_nav_item('web.doc', 'Documentation', use_li=True) }}
             </ul>
             <span class="navbar-text" id="status"></span>
         </div>

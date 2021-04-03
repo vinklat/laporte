@@ -123,3 +123,7 @@ def get_pars():
                         '(console only; useful for a bug hunt :)',
                         **env_vars['LOG_VERBOSE'])
     return parser.parse_args()
+
+
+# get parameters from command line arguments
+pars = get_pars()
