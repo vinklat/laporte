@@ -57,6 +57,6 @@ Try sending data several times using curl:
 #### c) watch status
  - Laporte status page: [http://localhost:9128](http://localhost:9128)
  - JSON response of REST API: [http://localhost:9128/api/metrics/by_node](http://localhost:9128/api/metrics/by_node)
- - Prometheus metrics: [http://localhost:9128/prom](http://localhost:9128/prom)
+ - Prometheus metrics: [http://localhost:9128/prom](http://localhost:9128/status/metrics)
 
 ...more info on the [wiki](https://github.com/vinklat/laporte/wiki)
