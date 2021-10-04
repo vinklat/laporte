@@ -320,7 +320,7 @@ class Sensor(ABC):
 
         self.debounce_hits_remaining = self.debounce_hits
 
-        if (increment and self.value is not None):
+        if increment and isinstance(self.value, float):
             value += self.value
 
         if update:
