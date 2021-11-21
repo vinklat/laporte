@@ -49,8 +49,8 @@ class ConfLogger():
             record = old_factory(*args, **kwargs)
             record.event_id = event_id.get()
             if isinstance(record.event_id, str) and record.event_id.startswith('secret'):
-                record.msg = '<<confidental data %s>>' % hashlib.sha256(
-                    record.msg.encode()).hexdigest()[0:8]
+                digest = hashlib.sha256(record.msg.encode()).hexdigest()[0:8]
+                record.msg = f'<<confidental data {digest}>>'
                 record.args = []
             return record
 

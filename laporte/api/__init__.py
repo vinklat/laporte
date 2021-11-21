@@ -30,7 +30,7 @@ for sensor_id, t, t_str in sensors.get_parser_arguments():
     parser.add_argument(sensor_id,
                         type=t,
                         required=False,
-                        help='{} value for sensor {}'.format(t_str, sensor_id),
+                        help=f'{t_str} value for sensor {sensor_id}',
                         location='form')
 
 

@@ -247,8 +247,7 @@ class LaporteClient():
 
         while True:
             try:
-                self.sio.connect('http://{}:{}'.format(addr, port),
-                                 namespaces=namespaces)
+                self.sio.connect(f'http://{addr}:{port}', namespaces=namespaces)
             except socketio.exceptions.ConnectionError as exc:
                 logging.error("%s", exc)
                 sleep(10)

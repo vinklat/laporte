@@ -20,7 +20,7 @@ class EventID():
 
         if eid is None:
             self.event_cnt += 1
-            eid = '{:06x}'.format(self.event_cnt)
+            eid = f'{self.event_cnt:06x}'
 
         setattr(g, _G_ATTR_EVENT_ID, add_prefix + eid + add_suffix)
 

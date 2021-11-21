@@ -147,7 +147,7 @@ class PrometheusMetrics:
         if labels is None:  # because {} is dangerous default value
             labels = {}
 
-        metric_name = '{}_{}_{}'.format(prefix, name, suffix)
+        metric_name = f'{prefix}_{name}_{suffix}'
         label_keys = str(list(map(itemgetter(0), labels.items())))
         label_values = str(list(map(itemgetter(1), labels.items())))
         metric_id = metric_name + label_keys

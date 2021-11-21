@@ -165,9 +165,9 @@ class Sensors():
                 else:
                     raise TypeError
 
-                job_id = 'cron_{}.{}_{}'.format(
-                    sensor.node_id, sensor.sensor_id,
-                    hashlib.sha256(cron_str.encode('utf-8')).hexdigest()[0:6])
+                job_id = (f"cron_{sensor.node_id}."
+                          f"{sensor.sensor_id}_"
+                          f"{hashlib.sha256(cron_str.encode('utf-8')).hexdigest()[0:6]}")
 
                 job = self.scheduler.add_job(func=self.sensor_cron_trigger,
                                              trigger=CronTrigger(month=month,
@@ -204,8 +204,8 @@ class Sensors():
             yield sensor_id, dict(sensor.get_data(skip_None=False, selected=METRICS))
 
     def get_metrics(self, skip_None=True):
-        for node_id in self.node_id_index:
-            for sensor_id, sensor in self.node_id_index[node_id].items():
+        for node_id, sensors in self.node_id_index.items():
+            for sensor_id, sensor in sensors.items():
                 yield node_id, sensor_id, dict(
                     sensor.get_data(skip_None=skip_None, selected=METRICS))
 
@@ -454,7 +454,7 @@ class Sensors():
                         sensor.ttl_job = self.scheduler.add_job(
                             func=self.sensor_expire,
                             trigger=DateTrigger(run_date=ttl_time),
-                            id='exp_{}.{}'.format(node_id, sensor_id),
+                            id='exp_{node_id}.{sensor_id}',
                             args=[sensor, event_id.get()],
                             replace_existing=True)
                         diff[node_id][sensor_id]['exp_timestamp'] = datetime.timestamp(
@@ -592,8 +592,8 @@ class Sensors():
             else:
                 d[sensor.sensor_id] = (str, 'string')
 
-        for q in d:
-            yield q, d[q][0], d[q][1]
+        for q, r in d.items():
+            yield q, r[0], r[1]
 
     def default_values(self):
         for sensor in self.sensor_index:
@@ -620,7 +620,7 @@ class Sensors():
 
     def load_config(self, pars):
         try:
-            with open(pars.config_file, 'r') as stream:
+            with open(pars.config_file, 'r', encoding='utf-8') as stream:
                 if pars.config_jinja:
                     # load jinja2
                     t = Environment(
@@ -633,7 +633,7 @@ class Sensors():
                     config_dict = safe_load(stream)
         except (YAMLError, TemplateSyntaxError, TemplateNotFound,
                 FileNotFoundError) as exc:
-            raise self.ConfigException("Cant't read config - {}".format(exc))
+            raise self.ConfigException(f"Cant't read config - {exc}")
 
         self.add_sensors(config_dict)
         changes = self.__get_changed_nodes_dict()
