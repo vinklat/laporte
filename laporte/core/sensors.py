@@ -12,10 +12,10 @@ from jinja2 import (Environment, FileSystemLoader, TemplateSyntaxError, Template
 from yaml import safe_load, YAMLError
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.cron import CronTrigger
-from ..version import __version__
-from ..app import event_id
-from .sensor import (Gauge, Counter, Binary, Message, SENSOR, ACTUATOR, GAUGE, COUNTER,
-                     BINARY)
+from laporte.version import __version__
+from laporte.app import event_id
+from laporte.core.sensor import (Gauge, Counter, Binary, Message, SENSOR, ACTUATOR,
+                                 GAUGE, COUNTER, BINARY)
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -615,8 +615,7 @@ class Sensors():
 
     class ConfigException(Exception):
         def __init__(self, message):
-            Exception.__init__(self, message)
-            self.message = message
+            Exception.__init__(self, f"Config file: {message}")
 
     def load_config(self, pars):
         try:
@@ -633,7 +632,7 @@ class Sensors():
                     config_dict = safe_load(stream)
         except (YAMLError, TemplateSyntaxError, TemplateNotFound,
                 FileNotFoundError) as exc:
-            raise self.ConfigException(f"Cant't read config - {exc}")
+            raise self.ConfigException(exc) from exc
 
         self.add_sensors(config_dict)
         changes = self.__get_changed_nodes_dict()

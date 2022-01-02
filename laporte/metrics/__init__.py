@@ -7,7 +7,7 @@ import logging
 from operator import itemgetter
 from time import time
 from functools import wraps
-from ..version import app_name
+from laporte.version import app_name
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())

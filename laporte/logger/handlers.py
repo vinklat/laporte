@@ -4,8 +4,8 @@ Custom handlers for python logger
 
 import logging
 import json
-from ..metrics import metrics
-from ..metrics.common import log_message_metric
+from laporte.metrics import metrics
+from laporte.metrics.common import log_message_metric
 
 LOGS_NAMESPACE = '/logs'
 MAX_LOGBUF_ITEMS = 2048

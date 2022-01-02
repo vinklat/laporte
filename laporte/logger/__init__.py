@@ -7,11 +7,11 @@ import logging
 import hashlib
 import json
 from flask_socketio import Namespace, emit
-from ..argparser import pars
-from ..app import event_id, sio
-from ..metrics import metrics
-from ..metrics.common import socketio_duration_metric
-from .handlers import PrometheusHandler, SioHandler, LOGS_NAMESPACE
+from laporte.argparser import pars
+from laporte.app import event_id, sio
+from laporte.metrics import metrics
+from laporte.metrics.common import socketio_duration_metric
+from laporte.logger.handlers import PrometheusHandler, SioHandler, LOGS_NAMESPACE
 
 
 class ConfLogger():

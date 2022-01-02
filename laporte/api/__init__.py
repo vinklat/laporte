@@ -6,12 +6,12 @@ Flask blueprint and resources of Laporte REST API v1
 import logging
 from flask import Blueprint, request
 from flask_restx import Api, Resource, abort
-from ..argparser import pars
-from ..version import __version__, get_version_info, get_runtime_info
-from ..app import event_id
-from ..metrics import metrics
-from ..metrics.common import http_duration_metric
-from ..core import sensors
+from laporte.argparser import pars
+from laporte.version import __version__, get_version_info, get_runtime_info
+from laporte.app import event_id
+from laporte.metrics import metrics
+from laporte.metrics.common import http_duration_metric
+from laporte.core import sensors
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())

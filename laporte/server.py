@@ -11,13 +11,13 @@ import sys
 from geventwebsocket.handler import WebSocketHandler
 from gevent.pywsgi import WSGIServer, LoggingLogAdapter
 
-from .argparser import pars
-from .app import app
-from .logger import logger
-from .core import sensors, scheduler
-from .api import api_bp
-from .web import web_bp
-from .metrics.collector import metrics_bp
+from laporte.argparser import pars
+from laporte.app import app
+from laporte.logger import logger
+from laporte.core import sensors, scheduler
+from laporte.api import api_bp
+from laporte.web import web_bp
+from laporte.metrics.collector import metrics_bp
 
 app.register_blueprint(api_bp)
 app.register_blueprint(web_bp)

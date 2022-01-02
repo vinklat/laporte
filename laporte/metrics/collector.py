@@ -9,10 +9,10 @@ from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from prometheus_client.core import REGISTRY
 from prometheus_client.core import (InfoMetricFamily, GaugeMetricFamily,
                                     CounterMetricFamily, SummaryMetricFamily)
-from ..core.sensor import COUNTER
-from ..version import app_name, __version__
-from ..metrics import metrics
-from ..core import sensors
+from laporte.core.sensor import COUNTER
+from laporte.version import app_name, __version__
+from laporte.metrics import metrics
+from laporte.core import sensors
 
 metrics_bp = Blueprint('metrics', __name__)
 

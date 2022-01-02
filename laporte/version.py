@@ -6,7 +6,7 @@ from platform import python_version
 import os
 import pkg_resources
 
-__version__ = '0.7.2'
+__version__ = '0.7.3rc0'
 app_name = 'laporte'
 
 start_timestamp = datetime.now().isoformat()
@@ -15,11 +15,11 @@ start_timestamp = datetime.now().isoformat()
 def get_version_info():
     '''get app version info'''
 
-    glum = {
+    ret = {
         'version': __version__,
     }
 
-    return glum
+    return ret
 
 
 def get_runtime_info():

@@ -3,7 +3,7 @@
 Common prometheus metrics presets
 '''
 
-from ..version import app_name
+from laporte.version import app_name
 
 log_message_metric = {
     'prefix': app_name,

@@ -7,11 +7,11 @@ import logging
 import json
 from apscheduler.schedulers.gevent import GeventScheduler
 from flask_socketio import Namespace, emit, join_room, rooms
-from ..app import app, sio, event_id
-from ..metrics import metrics
-from ..metrics.common import socketio_duration_metric
-from ..core.sensors import METRICS_NAMESPACE, EVENTS_NAMESPACE
-from .sensors import Sensors
+from laporte.app import app, sio, event_id
+from laporte.metrics import metrics
+from laporte.metrics.common import socketio_duration_metric
+from laporte.core.sensors import METRICS_NAMESPACE, EVENTS_NAMESPACE
+from laporte.core.sensors import Sensors
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())

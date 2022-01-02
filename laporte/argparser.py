@@ -4,7 +4,7 @@
 import logging
 import os
 from argparse import ArgumentParser, ArgumentTypeError
-from .version import __version__, get_version_info
+from laporte.version import __version__, app_name, get_version_info
 
 LOG_LEVEL_STRINGS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 LOG_LEVEL_DEFAULT = 'DEBUG'
@@ -71,7 +71,7 @@ def get_pars():
             env_pars['default'] = default
             env_pars['required'] = False
 
-    parser = ArgumentParser(description='Laporte {__version__}')
+    parser = ArgumentParser(description=f'{app_name.capitalize()} {__version__}')
     parser.add_argument('-a',
                         '--listen-address',
                         action='store',

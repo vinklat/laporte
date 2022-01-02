@@ -7,12 +7,12 @@ import logging
 from flask import Flask, request
 from flask_socketio import SocketIO
 from flask_bootstrap import Bootstrap
-from ..argparser import pars
-from ..metrics import metrics
-from ..metrics.common import (http_requests_metric, http_responses_metric,
-                              http_exception_responses_metric)
-from .request_id import RequestID
-from .event_id import EventID
+from laporte.argparser import pars
+from laporte.metrics import metrics
+from laporte.metrics.common import (http_requests_metric, http_responses_metric,
+                                    http_exception_responses_metric)
+from laporte.app.request_id import RequestID
+from laporte.app.event_id import EventID
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())

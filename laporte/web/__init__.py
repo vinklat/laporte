@@ -3,12 +3,12 @@ Flask blueprint and resources of Laporte web interface
 '''
 
 from flask import Blueprint, render_template
-from ..version import __version__, get_runtime_info
-from ..metrics import metrics
-from ..metrics.common import http_duration_metric
-from ..app import sio
-from ..api import api
-from ..core import sensors
+from laporte.version import __version__, get_runtime_info
+from laporte.metrics import metrics
+from laporte.metrics.common import http_duration_metric
+from laporte.app import sio
+from laporte.api import api
+from laporte.core import sensors
 
 web_bp = Blueprint('web',
                    __name__,
