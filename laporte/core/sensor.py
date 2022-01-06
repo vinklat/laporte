@@ -5,6 +5,7 @@ Objects that collect internal states (and config) of one sensor
 
 import logging
 import re
+from typing import Any
 from copy import deepcopy
 from abc import ABC, abstractmethod
 from time import time
@@ -501,7 +502,7 @@ class Binary(Sensor):
         self.count_hit()
         return self.sensor_reset()
 
-    def fix_value(self, value):
+    def fix_value(self, value: Any) -> bool:
         values_map = {
             'True': True,
             'true': True,
@@ -512,6 +513,7 @@ class Binary(Sensor):
             'Yes': True,
             'yes': True,
             '1': True,
+            '1.0': True,
             'False': False,
             'false': False,
             'OFF': False,
@@ -520,7 +522,8 @@ class Binary(Sensor):
             'LOW': False,
             'No': False,
             'no': False,
-            '0': False
+            '0': False,
+            '0.0': False,
         }
 
         if isinstance(value, str):
@@ -529,7 +532,7 @@ class Binary(Sensor):
             except KeyError:
                 value = bool(value)
 
-        return value
+        return bool(value)
 
     def __init__(self,
                  sensor_id=None,
