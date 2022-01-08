@@ -412,9 +412,7 @@ class Gauge(Sensor):
         return self.sensor_reset()
 
     def fix_value(self, value):
-        if isinstance(value, str):
-            value = float(value)
-        return value
+        return float(value)
 
     def __init__(self,
                  sensor_id=None,
@@ -457,9 +455,7 @@ class Counter(Sensor):
         return self.sensor_reset()
 
     def fix_value(self, value):
-        if isinstance(value, str):
-            value = float(value)
-        return value
+        return float(value)
 
     def __init__(self,
                  sensor_id=None,
@@ -528,11 +524,14 @@ class Binary(Sensor):
 
         if isinstance(value, str):
             try:
-                value = values_map[value]
+                ret = values_map[value]
             except KeyError:
-                value = bool(value)
+                # any other string causes True
+                ret = True
+        else:
+            ret = bool(value)
 
-        return bool(value)
+        return ret
 
     def __init__(self,
                  sensor_id=None,
@@ -579,7 +578,7 @@ class Message(Sensor):
         return self.sensor_reset()
 
     def fix_value(self, value):
-        return value
+        return str(value)
 
     def __init__(self,
                  sensor_id=None,
