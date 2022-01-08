@@ -1,25 +1,13 @@
-# -*- coding: utf-8 -*-
-'''objects that create a Socket.OI client for Laporte'''
-
 import logging
 import json
-from time import sleep
 import socketio
-from prometheus_client import Counter
+from laporte.client.metrics import (c_responses_total, c_connects_total)
 
 METRICS_NAMESPACE = '/metrics'
 EVENTS_NAMESPACE = '/events'
 
 # create logger
 logging.getLogger(__name__).addHandler(logging.NullHandler())
-
-c_responses_total = Counter('laporte_responses_total',
-                            'Total count of Socket.IO responses',
-                            ['response', 'namespace'])
-c_emits_total = Counter('laporte_emits_total', 'Total count of Socket.IO emits',
-                        ['response', 'namespace'])
-c_connects_total = Counter('laporte_connects_total',
-                           'Total count of connects/reconnects', ['service'])
 
 
 class MetricsNamespace(socketio.ClientNamespace):
@@ -210,58 +198,3 @@ class DefaultNamespace(socketio.ClientNamespace):
         del data  # Ignored parameter
         c_responses_total.labels('reload_response   ', '/').inc()
         logging.info("Laporte was reloaded")
-
-
-class LaporteClient():
-    '''Object containing Socket.IO client with registered namespaces.'''
-    def __init__(self, addr, port, gateways=None, events=False):
-        '''
-        Connect to the laporte server.
-
-            addr (str):
-                Hostname or IP of laporte server.
-            port (int):
-                 Port of laporte server.
-            gateways (Optional[List[str]]):
-                List of gateways to be joined in.
-                Defaults to None. Register metrics namespece if set.
-            events (Optional[bool]):
-                Register events namespace. Defaults to False.
-        '''
-
-        namespaces = []
-        self.sio = socketio.Client(logger=True, engineio_logger=True)
-        self.ns_default = DefaultNamespace('/')
-        self.ns_metrics = MetricsNamespace(METRICS_NAMESPACE)
-        self.ns_events = EventsNamespace(EVENTS_NAMESPACE)
-        self.sio.register_namespace(self.ns_default)
-
-        if isinstance(gateways, list):
-            namespaces.append(METRICS_NAMESPACE)
-            self.ns_metrics.gateways = gateways
-            self.sio.register_namespace(self.ns_metrics)
-
-        if events:
-            namespaces.append(EVENTS_NAMESPACE)
-            self.sio.register_namespace(self.ns_events)
-
-        while True:
-            try:
-                self.sio.connect(f'http://{addr}:{port}', namespaces=namespaces)
-            except socketio.exceptions.ConnectionError as exc:
-                logging.error("%s", exc)
-                sleep(10)
-            else:
-                break
-
-    def loop(self):
-        '''main loop for Socket.IO client'''
-
-        self.sio.wait()
-
-    def emit(self, response, message, namespace=METRICS_NAMESPACE):
-        '''emit custom response to the Laporte'''
-
-        logging.info("Laporte emit: %s %s", response, message)
-        c_emits_total.labels(response, namespace).inc()
-        self.sio.emit(response, message, namespace=namespace)

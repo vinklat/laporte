@@ -6,7 +6,7 @@ from platform import python_version
 import os
 import pkg_resources
 
-__version__ = '0.7.3'
+__version__ = '0.7.4rc0'
 app_name = 'laporte'
 
 start_timestamp = datetime.now().isoformat()
