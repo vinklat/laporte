@@ -454,7 +454,7 @@ class Sensors():
                         sensor.ttl_job = self.scheduler.add_job(
                             func=self.sensor_expire,
                             trigger=DateTrigger(run_date=ttl_time),
-                            id='exp_{node_id}.{sensor_id}',
+                            id=f'exp_{node_id}.{sensor_id}',
                             args=[sensor, event_id.get()],
                             replace_existing=True)
                         diff[node_id][sensor_id]['exp_timestamp'] = datetime.timestamp(
