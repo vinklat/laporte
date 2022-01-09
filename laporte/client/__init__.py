@@ -6,7 +6,7 @@ Objects that create a Socket.OI client for Laporte
 import logging
 from time import sleep
 import socketio
-from laporte.client.metrics import c_emits_total
+from laporte.client.metrics import laporte_emits_total
 from laporte.client.sio import (DefaultNamespace, MetricsNamespace, EventsNamespace,
                                 METRICS_NAMESPACE, EVENTS_NAMESPACE)
 # create logger
@@ -71,5 +71,5 @@ class LaporteClient():
         '''emit custom response to the Laporte'''
 
         logging.info("Laporte emit: %s %s", response, message)
-        c_emits_total.labels(response, namespace).inc()
+        laporte_emits_total.labels(response, namespace).inc()
         self.sio.emit(response, message, namespace=namespace)

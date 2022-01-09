@@ -1,7 +1,7 @@
 import logging
 import json
 import socketio
-from laporte.client.metrics import (c_responses_total, c_connects_total)
+from laporte.client.metrics import (laporte_responses_total, laporte_connects_total)
 
 METRICS_NAMESPACE = '/metrics'
 EVENTS_NAMESPACE = '/events'
@@ -44,7 +44,7 @@ class MetricsNamespace(socketio.ClientNamespace):
     def on_actuator_response(self, data):
         '''receive metrics of changed actuators identified by node_id/sensor_id'''
 
-        c_responses_total.labels('actuator_response', METRICS_NAMESPACE).inc()
+        laporte_responses_total.labels('actuator_response', METRICS_NAMESPACE).inc()
         for gateway, nodes in json.loads(data).items():
             for node_id, sensors in nodes.items():
                 self.actuator_handler(gateway, node_id, sensors)
@@ -52,7 +52,7 @@ class MetricsNamespace(socketio.ClientNamespace):
     def on_actuator_addr_response(self, data):
         '''receive metrics of changed actuators identified by node_addr/key'''
 
-        c_responses_total.labels('actuator_addr_response', METRICS_NAMESPACE).inc()
+        laporte_responses_total.labels('actuator_addr_response', METRICS_NAMESPACE).inc()
         for gateway, nodes in json.loads(data).items():
             for node_addr, keys in nodes.items():
                 self.actuator_addr_handler(gateway, node_addr, keys)
@@ -60,14 +60,14 @@ class MetricsNamespace(socketio.ClientNamespace):
     def on_config_response(self, data):
         '''TODO: receive sensor configuration from laporte (after room join)'''
 
-        c_responses_total.labels('config_response', METRICS_NAMESPACE).inc()
+        laporte_responses_total.labels('config_response', METRICS_NAMESPACE).inc()
         self.config_handler(data)
 
     @staticmethod
     def on_status_response(data):
         '''receive and log status message from laporte'''
 
-        c_responses_total.labels('status_response', METRICS_NAMESPACE).inc()
+        laporte_responses_total.labels('status_response', METRICS_NAMESPACE).inc()
         logging.info("Laporte %s namespace status response: %s", METRICS_NAMESPACE, data)
 
     def __join_gateways(self):
@@ -129,7 +129,7 @@ class EventsNamespace(socketio.ClientNamespace):
             logging.error('invalid message: %s', exc)
             return
 
-        c_responses_total.labels('init_response', EVENTS_NAMESPACE).inc()
+        laporte_responses_total.labels('init_response', EVENTS_NAMESPACE).inc()
         self.init_handler(data)
 
     def on_event_response(self, json_msg):
@@ -144,7 +144,7 @@ class EventsNamespace(socketio.ClientNamespace):
             logging.error('invalid message: %s', exc)
             return
 
-        c_responses_total.labels('event_response', EVENTS_NAMESPACE).inc()
+        laporte_responses_total.labels('event_response', EVENTS_NAMESPACE).inc()
         for node_id, metrics in data.items():
             self.update_handler(node_id, metrics)
 
@@ -152,7 +152,7 @@ class EventsNamespace(socketio.ClientNamespace):
     def on_status_response(data):
         '''receive and log status message from laporte'''
 
-        c_responses_total.labels('status_response', EVENTS_NAMESPACE).inc()
+        laporte_responses_total.labels('status_response', EVENTS_NAMESPACE).inc()
         logging.info("Laporte %s namespace status response: %s", METRICS_NAMESPACE, data)
 
 
@@ -163,14 +163,14 @@ class DefaultNamespace(socketio.ClientNamespace):
         '''fired upon a successful connection'''
 
         logging.info("Laporte connected OK")
-        c_connects_total.labels('laporte').inc()
+        laporte_connects_total.labels('laporte').inc()
 
     @staticmethod
     def on_reconnect():
         '''fired upon a successful reconnection'''
 
         logging.info("Laporte reconnected OK")
-        c_connects_total.labels('laporte').inc()
+        laporte_connects_total.labels('laporte').inc()
 
     @staticmethod
     def on_disconnect():
@@ -188,7 +188,7 @@ class DefaultNamespace(socketio.ClientNamespace):
     def on_status_response(data):
         '''receive and log status message from laporte'''
 
-        c_responses_total.labels('status_response', '/').inc()
+        laporte_responses_total.labels('status_response', '/').inc()
         logging.info("Laporte status response: %s", data)
 
     @staticmethod
@@ -196,5 +196,5 @@ class DefaultNamespace(socketio.ClientNamespace):
         '''receive reload response from laporte'''
 
         del data  # Ignored parameter
-        c_responses_total.labels('reload_response   ', '/').inc()
+        laporte_responses_total.labels('reload_response   ', '/').inc()
         logging.info("Laporte was reloaded")
