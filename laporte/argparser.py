@@ -91,7 +91,7 @@ def get_pars():
                         action='store',
                         dest='config_file',
                         help=("yaml or yaml+jinja2 file with "
-                              f"sensor configuration (default {CONFIG_DIR_DEFAULT})"),
+                              f"sensor configuration (default {CONFIG_FILE_DEFAULT})"),
                         type=str,
                         **env_vars['CONFIG_FILE'])
     parser.add_argument('-d',
